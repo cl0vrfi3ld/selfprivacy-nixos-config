@@ -109,3 +109,119 @@ If you added a new SelfPrivacy module, you have to also edit a `genUserdata` fun
         ```
         Substitute `PACKAGE_NAME` and `NIXPKGS_COMMIT_SHA1` with affected package name and nixpkgs commit SHA1 (found at step 1), respectively.
     3. Commit the [`overlay.nix`](overlay.nix) changes. Configuration is ready to be built.
+
+## SelfPrivacy Module schema
+
+### Flake.nix metadata
+
+```nix
+{
+  description = "Flake description";
+
+  outputs = { self }: {
+    nixosModules.default = import ./module.nix;
+    configPathsNeeded =
+      builtins.fromJSON (builtins.readFile ./config-paths-needed.json);
+    meta = {lib, ...}: {
+      # Schema version
+      spModuleVersion = 1;
+      # Must be the same name as flake and Systemd slice
+      id = "jitsi-meet";
+      # Service name displayed to a user
+      name = "JitsiMeet";
+      # Description displayed to a user
+      description = "Jitsi Meet is a free and open-source video conferencing solution.";
+      # Icon of the service
+      svgIcon = builtins.readFile ./icon.svg;
+      # Do we need to show URL in the UI? True by default
+      showUrl = true;
+      # If there are several subdomain options, which one to use to generate the URL?
+      primarySubdomain = "subdomain";
+      # Can be moved to another volume?
+      isMovable = false;
+      # Is required for SelfPrivacy operation?
+      isRequired = false;
+      # Can be backed up by API?
+      # Implied to be TRUE by default
+      canBeBackedUp = true;
+      # Description of the backup
+      backupDescription = "Secrets that are used to encrypt the communication.";
+      # Systemd services that API checks and manipulates
+      systemdServices = [
+        "prosody.service"
+        "jitsi-videobridge2.service"
+        "jicofo.service"
+      ];
+      # A unix user used by this service
+      # By default implied to be the same as the service ID
+      user = "jitsi-meet";
+      # A unix group used by this group
+      # By default implied to be the same as the user
+      group = "jitsi-meet";
+      # Folders that have to be moved or backed up
+      # Ownership is implied by the user/group defined above
+      folders = [
+        "/var/lib/jitsi-meet"
+      ];
+      # Same as above, but if you need to overwrite ownership
+      ownedFolders = [
+        {
+          path = "/var/lib/prometheus";
+          owner = "prometheus";
+          group = "prometheus";
+        }
+      ];
+      # PostgreSQL databases to back up
+      postgreDatabases = [];
+      # Licenses of this service
+      license = [
+        lib.licenses.asl20
+      ];
+      # Homepage for this service
+      homepage = "https://jitsi.org/meet";
+      # Git repository with the sources of this service
+      sourcePage = "https://github.com/jitsi/jitsi-meet";
+      # What is our support level for this service?
+      # Supported values:
+      # - normal
+      # - deprecated
+      # - experimental
+      supportLevel = "normal";
+    };
+  };
+}
+```
+
+### Flake options
+
+```nix
+enable = (lib.mkOption {
+  default = false;
+  type = lib.types.bool;
+  description = "Enable";
+}) // {
+  meta = {
+    type = "enable";
+  };
+};
+location = (lib.mkOption {
+  type = lib.types.str;
+  description = "Location";
+}) // {
+  meta = {
+    type = "location";
+  };
+};
+subdomain = (lib.mkOption {
+  default = "";
+  type = lib.types.strMatching "[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9]";
+  description = "Subdomain";
+}) // {
+  meta = {
+    widget = "subdomain";
+    type = "string";
+    regex = "[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9]";
+    weight = 0;
+  };
+};
+```

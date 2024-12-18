@@ -6,47 +6,106 @@ let
     then "/volumes/${cfg.location}/gitea"
     else "/var/lib/gitea";
   cfg = sp.modules.gitea;
+  themes = [
+    "forgejo-auto"
+    "forgejo-light"
+    "forgejo-dark"
+    "gitea-auto"
+    "gitea-light"
+    "gitea-dark"
+  ];
 in
 {
   options.selfprivacy.modules.gitea = {
-    enable = lib.mkOption {
+    enable = (lib.mkOption {
       default = false;
       type = lib.types.bool;
+      description = "Enable Forgejo";
+    }) // {
+      meta = {
+        type = "enable";
+      };
     };
-    location = lib.mkOption {
+    location = (lib.mkOption {
       type = lib.types.str;
+      description = "Forgejo location";
+    }) // {
+      meta = {
+        type = "location";
+      };
     };
-    subdomain = lib.mkOption {
+    subdomain = (lib.mkOption {
       default = "git";
       type = lib.types.strMatching "[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9]";
+      description = "Subdomain";
+    }) // {
+      meta = {
+        widget = "subdomain";
+        type = "string";
+        regex = "[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9]";
+        weight = 0;
+      };
     };
-    appName = lib.mkOption {
+    appName = (lib.mkOption {
       default = "SelfPrivacy git Service";
       type = lib.types.str;
+      description = "The name displayed in the web interface";
+    }) // {
+      meta = {
+        type = "string";
+        weight = 1;
+      };
     };
-    enableLfs = lib.mkOption {
+    enableLfs = (lib.mkOption {
       default = true;
       type = lib.types.bool;
+      description = "Enable Git LFS";
+    }) // {
+      meta = {
+        type = "bool";
+        weight = 2;
+      };
     };
-    forcePrivate = lib.mkOption {
+    forcePrivate = (lib.mkOption {
       default = false;
       type = lib.types.bool;
       description = "Force all new repositories to be private";
+    }) // {
+      meta = {
+        type = "bool";
+        weight = 3;
+      };
     };
-    disableRegistration = lib.mkOption {
+    disableRegistration = (lib.mkOption {
       default = false;
       type = lib.types.bool;
       description = "Disable registration of new users";
+    }) // {
+      meta = {
+        type = "bool";
+        weight = 4;
+      };
     };
-    requireSigninView = lib.mkOption {
+    requireSigninView = (lib.mkOption {
       default = false;
       type = lib.types.bool;
-      description = "Require signin to view any page";
+      description = "Force users to log in to view any page";
+    }) // {
+      meta = {
+        type = "bool";
+        weight = 5;
+      };
     };
-    defaultTheme = lib.mkOption {
+    defaultTheme = (lib.mkOption {
       default = "forgejo-auto";
-      type = lib.types.enum [ "forgejo-auto" "forgejo-light" "forgejo-dark" "auto" "gitea" "arc-green" ];
-      description = "The default theme for the gitea instance";
+      type = lib.types.enum themes;
+      description = "Default theme";
+    }) // {
+      meta = {
+        type = "enum";
+        options = themes;
+        weight = 6;
+      };
     };
   };
 

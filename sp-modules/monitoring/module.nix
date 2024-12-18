@@ -4,12 +4,22 @@ let
 in
 {
   options.selfprivacy.modules.monitoring = {
-    enable = lib.mkOption {
+    enable = (lib.mkOption {
       default = false;
       type = lib.types.bool;
+      description = "Enable monitoring service";
+    }) // {
+      meta = {
+        type = "enable";
+      };
     };
-    location = lib.mkOption {
+    location = (lib.mkOption {
       type = lib.types.str;
+      description = "Monitoring data location";
+    }) // {
+      meta = {
+        type = "location";
+      };
     };
   };
   config = lib.mkIf cfg.enable {

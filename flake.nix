@@ -25,6 +25,16 @@
             deployment
             ./configuration.nix
             selfprivacy-api.nixosModules.default
+            ({ pkgs, lib, ... }: {
+              environment.etc = (lib.attrsets.mapAttrs'
+                (name: sp-module: {
+                  name = "sp-modules/${name}";
+                  value.text = import ./lib/meta.nix { inherit pkgs sp-module; };
+                })
+                sp-modules) // {
+                suggested-sp-modules.text = builtins.toJSON (builtins.attrNames (builtins.readDir ./sp-modules));
+              };
+            })
             (
               let
                 deepFilter = ref: attrset:

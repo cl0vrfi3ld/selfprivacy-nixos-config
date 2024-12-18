@@ -5,5 +5,25 @@
     nixosModules.default = import ./module.nix;
     configPathsNeeded =
       builtins.fromJSON (builtins.readFile ./config-paths-needed.json);
+    meta = { lib, ... }: {
+      spModuleVersion = 1;
+      id = "roundcube";
+      name = "Roundcube";
+      description = "Roundcube is an open source webmail software.";
+      svgIcon = builtins.readFile ./icon.svg;
+      isMovable = false;
+      isRequired = false;
+      canBeBackedUp = false;
+      backupDescription = "Nothing to backup.";
+      systemdServices = [
+        "phpfpm-roundcube.service"
+      ];
+      license = [
+        lib.licenses.gpl3
+      ];
+      homepage = "https://roundcube.net/";
+      sourcePage = "https://github.com/roundcube/roundcubemail";
+      supportLevel = "normal";
+    };
   };
 }

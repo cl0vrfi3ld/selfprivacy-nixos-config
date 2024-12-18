@@ -5,13 +5,26 @@ let
 in
 {
   options.selfprivacy.modules.roundcube = {
-    enable = lib.mkOption {
+    enable = (lib.mkOption {
       default = false;
       type = lib.types.bool;
+      description = "Enable";
+    }) // {
+      meta = {
+        type = "enable";
+      };
     };
-    subdomain = lib.mkOption {
+    subdomain = (lib.mkOption {
       default = "roundcube";
       type = lib.types.strMatching "[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9]";
+      description = "Subdomain";
+    }) // {
+      meta = {
+        widget = "subdomain";
+        type = "string";
+        regex = "[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9]";
+        weight = 0;
+      };
     };
   };
 

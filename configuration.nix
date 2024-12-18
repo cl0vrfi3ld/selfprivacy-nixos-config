@@ -14,6 +14,20 @@ let
       echo "$token"
     '';
   };
+  # TODO: We need this in the API's environmet, not here.
+  sp-fetch-remote-module = pkgs.writeShellApplication {
+    name = "sp-fetch-remote-module";
+    runtimeInputs = [ config.nix.package.out ];
+    text = ''
+      if [ "$#" -ne 1 ]; then
+        echo "Usage: $0 <URL>"
+        exit 1
+      fi
+
+      URL="$1"
+      nix eval --file /etc/nixos/sp-fetch-remote-module.nix --raw --apply "f: f { flakeURL = \"$URL\"; }" | jq .
+    '';
+  };
 in
 {
   imports = [
@@ -26,6 +40,15 @@ in
     ./webserver/memcached.nix
     # ./resources/limits.nix
   ];
+
+  environment.etc."sp-fetch-remote-module.nix" = {
+    text = ''
+      { flakeURL }: let
+        sp-module = builtins.getFlake flakeURL;
+        pkgs = import ${pkgs.path} {};
+      in (import ${./lib/meta.nix}) { inherit pkgs sp-module; }
+    '';
+  };
 
   fileSystems."/".options = [ "noatime" ];
 
@@ -90,6 +113,7 @@ in
     git
     jq
     sp-print-api-token
+    sp-fetch-remote-module
   ];
   # consider environment.defaultPackages = lib.mkForce [];
   documentation.enable = false; # no {man,info}-pages & docs, etc to save space

@@ -7,28 +7,64 @@ let
 in
 {
   options.selfprivacy.modules.bitwarden = {
-    enable = lib.mkOption {
+    enable = (lib.mkOption {
       default = false;
       type = lib.types.bool;
+      description = "Enable Vaultwarden";
+    }) // {
+      meta = {
+        type = "enable";
+      };
     };
-    location = lib.mkOption {
+    location = (lib.mkOption {
       type = lib.types.str;
+      description = "Vaultwarden location";
+    }) // {
+      meta = {
+        type = "location";
+      };
     };
-    subdomain = lib.mkOption {
+    subdomain = (lib.mkOption {
       default = "password";
       type = lib.types.strMatching "[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9]";
+      description = "Subdomain";
+    }) // {
+      meta = {
+        widget = "subdomain";
+        type = "string";
+        regex = "[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9]";
+        weight = 0;
+      };
     };
-    signupsAllowed = lib.mkOption {
+    signupsAllowed = (lib.mkOption {
       default = true;
       type = lib.types.bool;
+      description = "Allow new user signups";
+    }) // {
+      meta = {
+        type = "bool";
+        weight = 1;
+      };
     };
-    sendsAllowed = lib.mkOption {
+    sendsAllowed = (lib.mkOption {
       default = true;
       type = lib.types.bool;
+      description = "Allow users to use Bitwarden Send";
+    }) // {
+      meta = {
+        type = "bool";
+        weight = 2;
+      };
     };
-    emergencyAccessAllowed = lib.mkOption {
+    emergencyAccessAllowed = (lib.mkOption {
       default = true;
       type = lib.types.bool;
+      description = "Allow users to enable Emergency Access";
+    }) // {
+      meta = {
+        type = "bool";
+        weight = 3;
+      };
     };
   };
 

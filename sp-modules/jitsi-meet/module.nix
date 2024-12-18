@@ -5,17 +5,36 @@ let
 in
 {
   options.selfprivacy.modules.jitsi-meet = {
-    enable = lib.mkOption {
+    enable = (lib.mkOption {
       default = false;
       type = lib.types.bool;
+      description = "Enable JitsiMeet";
+    }) // {
+      meta = {
+        type = "enable";
+      };
     };
-    subdomain = lib.mkOption {
+    subdomain = (lib.mkOption {
       default = "meet";
       type = lib.types.strMatching "[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9]";
+      description = "Subdomain";
+    }) // {
+      meta = {
+        widget = "subdomain";
+        type = "string";
+        regex = "[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9]";
+        weight = 0;
+      };
     };
-    appName = lib.mkOption {
+    appName = (lib.mkOption {
       default = "Jitsi Meet";
       type = lib.types.str;
+      description = "The name displayed in the web interface";
+    }) // {
+      meta = {
+        type = "string";
+        weight = 1;
+      };
     };
   };
 
