@@ -129,5 +129,15 @@ with lib;
       default = false;
       description = "Whether to bind-mount vmail and sieve folders";
     };
+    ################
+    #  PostgreSQL  #
+    ################
+    postgresql = {
+      location = mkOption {
+        description = "Volume name where to store Postgres data.";
+        type = types.nullOr types.str;
+        default = null;
+      };
+    };
   };
 }

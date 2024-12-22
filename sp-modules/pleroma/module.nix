@@ -48,16 +48,6 @@ in
           "x-systemd.before=pleroma-secrets.service"
         ];
       };
-      "/var/lib/postgresql" = {
-        device = "/volumes/${cfg.location}/postgresql";
-        options = [
-          "bind"
-          "x-systemd.required-by=pleroma-secrets.service"
-          "x-systemd.required-by=pleroma.service"
-          "x-systemd.before=pleroma-secrets.service"
-          "x-systemd.before=pleroma.service"
-        ];
-      };
     };
     services = {
       pleroma = {
@@ -72,8 +62,6 @@ in
         ];
       };
       postgresql = {
-        enable = true;
-        package = pkgs.postgresql_12;
         initialScript = "/etc/setup.psql";
         ensureDatabases = [
           "pleroma"
@@ -88,8 +76,6 @@ in
     };
 
     environment.etc."setup.psql".text = ''
-      CREATE USER pleroma;
-      CREATE DATABASE pleroma OWNER pleroma;
       \c pleroma;
       --Extensions made by ecto.migrate that need superuser access
       CREATE EXTENSION IF NOT EXISTS citext;

@@ -38,6 +38,7 @@ in
     ./letsencrypt/resolve.nix
     ./webserver/nginx.nix
     ./webserver/memcached.nix
+    ./postgresql/postgresql.nix
     # ./resources/limits.nix
   ];
 
