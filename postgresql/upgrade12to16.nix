@@ -118,7 +118,7 @@ in
 
         # Start Pleroma only if pleromaEnabled is true
         ExecStartPost =
-          optional cfg.pleromaEnabled "${pkgs.writeShellScript "postgresql-upgrade12to16-pre.sh" ''
+          optional cfg.pleromaEnabled "${pkgs.writeShellScript "postgresql-upgrade12to16-post.sh" ''
             if [ -d "${cfg.dataDir12}" ] && [ ! -d "${cfg.dataDir16}" ]; then
               ${pkgs.systemd}/bin/systemctl start --no-block pleroma.service
             fi
