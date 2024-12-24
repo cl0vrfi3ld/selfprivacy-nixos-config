@@ -124,7 +124,7 @@ If you added a new SelfPrivacy module, you have to also edit a `genUserdata` fun
       builtins.fromJSON (builtins.readFile ./config-paths-needed.json);
     meta = {lib, ...}: {
       # Schema version
-      spModuleManifestVersion = 1;
+      spModuleSchemaVersion = 1;
       # Must be the same name as flake and Systemd slice
       id = "jitsi-meet";
       # Service name displayed to a user

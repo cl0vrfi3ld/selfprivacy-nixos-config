@@ -6,7 +6,7 @@
     configPathsNeeded =
       builtins.fromJSON (builtins.readFile ./config-paths-needed.json);
     meta = { lib, ... }: {
-      spModuleManifestVersion = 1;
+      spModuleSchemaVersion = 1;
       id = "ocserv";
       name = "OpenConnect VPN";
       description = "OpenConnect VPN to connect your devices and access the internet.";

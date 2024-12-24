@@ -6,7 +6,7 @@
     configPathsNeeded =
       builtins.fromJSON (builtins.readFile ./config-paths-needed.json);
     meta = { lib, ... }: {
-      spModuleManifestVersion = 1;
+      spModuleSchemaVersion = 1;
       id = "gitea";
       name = "Forgejo";
       description = "Forgejo is a Git forge.";

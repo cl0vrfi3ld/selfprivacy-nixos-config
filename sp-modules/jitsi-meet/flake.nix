@@ -6,7 +6,7 @@
     configPathsNeeded =
       builtins.fromJSON (builtins.readFile ./config-paths-needed.json);
     meta = { lib, ... }: {
-      spModuleManifestVersion = 1;
+      spModuleSchemaVersion = 1;
       id = "jitsi-meet";
       name = "JitsiMeet";
       description = "Jitsi Meet is a free and open-source video conferencing solution.";
