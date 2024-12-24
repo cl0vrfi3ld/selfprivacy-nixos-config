@@ -13,8 +13,11 @@
       svgIcon = builtins.readFile ./icon.svg;
       isMovable = false;
       isRequired = false;
-      canBeBackedUp = false;
-      backupDescription = "Nothing to backup.";
+      canBeBackedUp = true;
+      backupDescription = "Users' settings.";
+      postgreDatabases = [
+        "roundcube"
+      ];
       systemdServices = [
         "phpfpm-roundcube.service"
       ];
