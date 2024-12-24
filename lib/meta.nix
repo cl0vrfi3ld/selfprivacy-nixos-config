@@ -1,8 +1,6 @@
 { sp-module, pkgs }:
 let
   lib = pkgs.lib;
-  # sp-module = builtins.getFlake "git+file:.?dir=sp-modules/jitsi-meet";
-  # sp-module = builtins.getFlake flakeURL;
   options = (pkgs.lib.evalModules { modules = [{ _module.check = false; } sp-module.nixosModules.default]; }).options;
   # Transform a Nix option to a JSON structure with metadata
   optionToMeta = (name: option: {
@@ -10,7 +8,6 @@ let
     description = if builtins.hasAttr "description" option then option.description else null;
     loc = option.loc;
     meta = if builtins.hasAttr "meta" option then option.meta else null;
-    # value = if builtins.hasAttr "value" option then option.value else null;
     default = if builtins.hasAttr "default" option then option.default else null;
   });
 in
