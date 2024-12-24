@@ -6,7 +6,7 @@
     configPathsNeeded =
       builtins.fromJSON (builtins.readFile ./config-paths-needed.json);
     meta = { lib, ... }: {
-      spModuleVersion = 1;
+      spModuleManifestVersion = 1;
       id = "monitoring";
       name = "Prometheus";
       description = "Prometheus is used for resource monitoring and alerts.";

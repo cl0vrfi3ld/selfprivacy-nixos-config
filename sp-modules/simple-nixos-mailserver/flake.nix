@@ -15,7 +15,7 @@
     configPathsNeeded =
       builtins.fromJSON (builtins.readFile ./config-paths-needed.json);
     meta = { lib, ... }: {
-      spModuleVersion = 1;
+      spModuleManifestVersion = 1;
       id = "simple-nixos-mailserver";
       name = "Mail Server";
       description = "E-Mail for company and family.";

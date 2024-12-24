@@ -6,7 +6,7 @@
     configPathsNeeded =
       builtins.fromJSON (builtins.readFile ./config-paths-needed.json);
     meta = { lib, ... }: {
-      spModuleVersion = 1;
+      spModuleManifestVersion = 1;
       id = "roundcube";
       name = "Roundcube";
       description = "Roundcube is an open source webmail software.";

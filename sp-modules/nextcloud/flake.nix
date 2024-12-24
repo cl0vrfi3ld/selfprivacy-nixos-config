@@ -7,7 +7,7 @@
     configPathsNeeded =
       builtins.fromJSON (builtins.readFile ./config-paths-needed.json);
     meta = { lib, ... }: {
-      spModuleVersion = 1;
+      spModuleManifestVersion = 1;
       id = "nextcloud";
       name = "Nextcloud";
       description = "Nextcloud is a cloud storage service that offers a web interface and a desktop client.";
