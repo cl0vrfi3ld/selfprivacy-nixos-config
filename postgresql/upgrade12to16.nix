@@ -110,6 +110,8 @@ in
                 --link \
                 --verbose
 
+              touch "$newDataDir/.sp_migrated"
+
               echo "PostgreSQL upgrade from 12 to 16 completed."
             else
               echo "No PostgreSQL 12 data directory detected or already upgraded. Skipping."
@@ -119,8 +121,10 @@ in
         # Start Pleroma only if pleromaEnabled is true
         ExecStartPost =
           optional cfg.pleromaEnabled "${pkgs.writeShellScript "postgresql-upgrade12to16-post.sh" ''
-            if [ -d "${cfg.dataDir12}" ] && [ ! -d "${cfg.dataDir16}" ]; then
+            if test -e "${cfg.dataDir16}/.sp_migrated"; then
               ${pkgs.systemd}/bin/systemctl start --no-block pleroma.service
+
+              rm -f "${cfg.dataDir16}/.sp_migrated"
             fi
             ''
             }";
