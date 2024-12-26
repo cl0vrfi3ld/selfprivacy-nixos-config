@@ -83,8 +83,8 @@ in
     domain = config.selfprivacy.domain;
     usePredictableInterfaceNames = false;
     firewall = {
-      allowedTCPPorts = lib.mkForce [ 22 25 80 143 443 465 587 993 4443 8443 ];
-      allowedUDPPorts = lib.mkForce [ 8443 10000 ];
+      allowedTCPPorts = [ 22 25 80 143 443 465 587 993 4443 8443 ];
+      allowedUDPPorts = [ 8443 10000 ];
       extraCommands = ''
         iptables --table nat --append POSTROUTING --out-interface eth0 -j MASQUERADE
         iptables --append FORWARD --in-interface vpn00 -j ACCEPT
