@@ -64,7 +64,9 @@ in
         options = [
           "bind"
           "x-systemd.required-by=murmur.service"
+          "x-systemd.required-by=murmur-ensure-folder-ownership.service"
           "x-systemd.before=murmur.service"
+          "x-systemd.before=murmur-ensure-folder-ownership.service"
         ];
       };
     };
@@ -77,7 +79,18 @@ in
     };
     systemd = {
       services = {
-        murmur.serviceConfig.Slice = "mumble.slice";
+        murmur = { serviceConfig.Slice = "mumble.slice"; };
+        murmur-ensure-folder-ownership = {
+          description = "Ensure murmur folder ownership";
+          before = [ "murmur.service" ];
+          requiredBy = [ "murmur.service" ];
+          serviceConfig.Type = "oneshot";
+          serviceConfig.Slice = "mumble.slice";
+          path = with pkgs; [ coreutils ];
+          script = ''
+            chown -R murmur:murmur /var/lib/murmur
+          '';
+        };
       };
       slices.mumble = {
         description = "Mumble service slice";
