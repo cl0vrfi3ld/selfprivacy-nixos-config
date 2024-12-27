@@ -73,7 +73,7 @@ in
     services.kanidm.provision = lib.mkIf is-auth-enabled {
       groups = {
         "sp.roundcube.admins".members = [ "sp.admins" ];
-        "sp.roundcube.users".present = true;
+        "sp.roundcube.users".members = [ "sp.roundcube.admins" ];
       };
       systems.oauth2.roundcube = {
         displayName = "Roundcube";
@@ -91,14 +91,6 @@ in
           ];
         };
         removeOrphanedClaimMaps = true;
-        # add more scopes when a user is a member of specific group
-        supplementaryScopeMaps."sp.roundcube.admins" = [ "admin" ];
-        claimMaps.groups = {
-          joinType = "array";
-          valuesByGroup = {
-            "sp.roundcube.admins" = [ "admin" "test" ];
-          };
-        };
       };
     };
   };
