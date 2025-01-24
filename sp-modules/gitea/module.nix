@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, options, pkgs, ... }:
 let
   sp = config.selfprivacy;
   stateDir =
@@ -14,7 +14,7 @@ let
     "gitea-light"
     "gitea-dark"
   ];
-  is-auth-enabled = config.selfprivacy.modules.auth.enable or false;
+  is-auth-enabled = sp.modules.auth.enable or false;
   oauth-client-id = "forgejo";
   auth-passthru = config.passthru.selfprivacy.auth;
   oauth2-provider-name = auth-passthru.oauth2-provider-name;
@@ -189,250 +189,261 @@ in
     };
   };
 
-  config = lib.mkIf cfg.enable {
-    fileSystems = lib.mkIf sp.useBinds {
-      "/var/lib/gitea" = {
-        device = "/volumes/${cfg.location}/gitea";
-        options = [ "bind" ];
-      };
-    };
-    services.gitea.enable = false;
-    services.forgejo = {
-      enable = true;
-      package = pkgs.forgejo;
-      inherit stateDir;
-      user = "gitea";
-      group = "gitea";
-      database = {
-        type = "sqlite3";
-        host = "127.0.0.1";
-        name = "gitea";
-        user = "gitea";
-        path = "${stateDir}/data/gitea.db";
-        createDatabase = true;
-      };
-      # ssh = {
-      #   enable = true;
-      #   clonePort = 22;
-      # };
-      lfs = {
-        enable = cfg.enableLfs;
-        contentDir = "${stateDir}/lfs";
-      };
-      repositoryRoot = "${stateDir}/repositories";
-      #      cookieSecure = true;
-      settings = {
-        DEFAULT = {
-          APP_NAME = "${cfg.appName}";
-        };
-        server = {
-          DOMAIN = "${cfg.subdomain}.${sp.domain}";
-          ROOT_URL = "https://${cfg.subdomain}.${sp.domain}/";
-          HTTP_ADDR = "0.0.0.0";
-          HTTP_PORT = 3000;
-        };
-        mailer = {
-          ENABLED = false;
-        };
-        ui = {
-          DEFAULT_THEME = cfg.defaultTheme;
-          SHOW_USER_EMAIL = false;
-        };
-        picture = {
-          DISABLE_GRAVATAR = true;
-        };
-        admin = {
-          ENABLE_KANBAN_BOARD = true;
-        };
-        repository = {
-          FORCE_PRIVATE = cfg.forcePrivate;
-        };
-        session = {
-          COOKIE_SECURE = true;
-        };
-        log = {
-          ROOT_PATH = "${stateDir}/log";
-          LEVEL = if cfg.debug then "Warn" else "Trace";
-        };
-        service = {
-          DISABLE_REGISTRATION = cfg.disableRegistration;
-          REQUIRE_SIGNIN_VIEW = cfg.requireSigninView;
-        };
-      } // lib.attrsets.optionalAttrs is-auth-enabled {
-        auth.DISABLE_LOGIN_FORM = true;
-        service = {
-          DISABLE_REGISTRATION = cfg.disableRegistration;
-          REQUIRE_SIGNIN_VIEW = cfg.requireSigninView;
-          ALLOW_ONLY_EXTERNAL_REGISTRATION = true;
-          SHOW_REGISTRATION_BUTTON = false;
-          ENABLE_BASIC_AUTHENTICATION = false;
-        };
-
-        # disallow explore page and access to private repositories, but allow public
-        "service.explore".REQUIRE_SIGNIN_VIEW = true;
-
-        # TODO control via selfprivacy parameter
-        # "service.explore".DISABLE_USERS_PAGE = true;
-
-        oauth2_client = {
-          REDIRECT_URI = redirect-uri;
-          ACCOUNT_LINKING = "auto";
-          ENABLE_AUTO_REGISTRATION = true;
-          OPENID_CONNECT_SCOPES = "email openid profile";
-        };
-        # doesn't work if LDAP auth source is not active!
-        "cron.sync_external_users" = {
-          ENABLED = true;
-          RUN_AT_START = true;
-          NOTICE_ON_SUCCESS = true;
+  config = lib.mkIf cfg.enable (lib.mkMerge [
+    {
+      fileSystems = lib.mkIf sp.useBinds {
+        "/var/lib/gitea" = {
+          device = "/volumes/${cfg.location}/gitea";
+          options = [ "bind" ];
         };
       };
-    };
-
-    users.users.gitea = {
-      home = "${stateDir}";
-      useDefaultShell = true;
-      group = "gitea";
-      isSystemUser = true;
-    };
-    users.groups.gitea = { };
-    services.nginx.virtualHosts."${cfg.subdomain}.${sp.domain}" = {
-      useACMEHost = sp.domain;
-      forceSSL = true;
-      extraConfig = ''
-        add_header Strict-Transport-Security $hsts_header;
-        #add_header Content-Security-Policy "script-src 'self'; object-src 'none'; base-uri 'none';" always;
-        add_header 'Referrer-Policy' 'origin-when-cross-origin';
-        add_header X-Frame-Options DENY;
-        add_header X-Content-Type-Options nosniff;
-        add_header X-XSS-Protection "1; mode=block";
-        proxy_cookie_path / "/; secure; HttpOnly; SameSite=strict";
-      '' + lib.strings.optionalString is-auth-enabled ''
-        rewrite ^/user/login$ /user/oauth2/${oauth2-provider-name} last;
-        # FIXME is it needed?
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-      '';
-      locations = {
-        "/" = {
-          proxyPass = "http://127.0.0.1:3000";
-        };
-      };
-    };
-    systemd = {
+      services.gitea.enable = false;
       services.forgejo = {
-        unitConfig.RequiresMountsFor = lib.mkIf sp.useBinds "/volumes/${cfg.location}/gitea";
-        serviceConfig = {
-          Slice = "gitea.slice";
+        enable = true;
+        package = pkgs.forgejo;
+        inherit stateDir;
+        user = "gitea";
+        group = "gitea";
+        database = {
+          type = "sqlite3";
+          host = "127.0.0.1";
+          name = "gitea";
+          user = "gitea";
+          path = "${stateDir}/data/gitea.db";
+          createDatabase = true;
         };
-        preStart =
-          let
-            exe = lib.getExe config.services.forgejo.package;
-            # FIXME skip-tls-verify, bind-password
-            ldapConfigArgs = ''
-              --name LDAP \
-              --active \
-              --security-protocol LDAPS \
-              --skip-tls-verify \
-              --host '${auth-passthru.ldap-host}' \
-              --port '${toString auth-passthru.ldap-port}' \
-              --user-search-base '${auth-passthru.ldap-base-dn}' \
-              --user-filter '(&(class=person)(memberof=${users-group})(name=%s))' \
-              --admin-filter '(&(class=person)(memberof=${admins-group}))' \
-              --username-attribute name \
-              --firstname-attribute name \
-              --surname-attribute displayname \
-              --email-attribute mail \
-              --public-ssh-key-attribute sshPublicKey \
-              --bind-dn 'dn=token' \
-              --bind-password "$(cat ${kanidm-service-account-token-fp})" \
-              --synchronize-users
+        # ssh = {
+        #   enable = true;
+        #   clonePort = 22;
+        # };
+        lfs = {
+          enable = cfg.enableLfs;
+          contentDir = "${stateDir}/lfs";
+        };
+        repositoryRoot = "${stateDir}/repositories";
+        #      cookieSecure = true;
+        settings = {
+          DEFAULT = {
+            APP_NAME = "${cfg.appName}";
+          };
+          server = {
+            DOMAIN = "${cfg.subdomain}.${sp.domain}";
+            ROOT_URL = "https://${cfg.subdomain}.${sp.domain}/";
+            HTTP_ADDR = "0.0.0.0";
+            HTTP_PORT = 3000;
+          };
+          mailer = {
+            ENABLED = false;
+          };
+          ui = {
+            DEFAULT_THEME = cfg.defaultTheme;
+            SHOW_USER_EMAIL = false;
+          };
+          picture = {
+            DISABLE_GRAVATAR = true;
+          };
+          admin = {
+            ENABLE_KANBAN_BOARD = true;
+          };
+          repository = {
+            FORCE_PRIVATE = cfg.forcePrivate;
+          };
+          session = {
+            COOKIE_SECURE = true;
+          };
+          log = {
+            ROOT_PATH = "${stateDir}/log";
+            LEVEL = if cfg.debug then "Warn" else "Trace";
+          };
+          service = {
+            DISABLE_REGISTRATION = cfg.disableRegistration;
+            REQUIRE_SIGNIN_VIEW = cfg.requireSigninView;
+          };
+        };
+      };
+
+      users.users.gitea = {
+        home = "${stateDir}";
+        useDefaultShell = true;
+        group = "gitea";
+        isSystemUser = true;
+      };
+      users.groups.gitea = { };
+      services.nginx.virtualHosts."${cfg.subdomain}.${sp.domain}" = {
+        useACMEHost = sp.domain;
+        forceSSL = true;
+        extraConfig = ''
+          add_header Strict-Transport-Security $hsts_header;
+          #add_header Content-Security-Policy "script-src 'self'; object-src 'none'; base-uri 'none';" always;
+          add_header 'Referrer-Policy' 'origin-when-cross-origin';
+          add_header X-Frame-Options DENY;
+          add_header X-Content-Type-Options nosniff;
+          add_header X-XSS-Protection "1; mode=block";
+          proxy_cookie_path / "/; secure; HttpOnly; SameSite=strict";
+        '';
+        locations = {
+          "/" = {
+            proxyPass = "http://127.0.0.1:3000";
+          };
+        };
+      };
+      systemd = {
+        services.forgejo = {
+          unitConfig.RequiresMountsFor = lib.mkIf sp.useBinds "/volumes/${cfg.location}/gitea";
+          serviceConfig = {
+            Slice = "gitea.slice";
+          };
+        };
+        slices.gitea = {
+          description = "Forgejo service slice";
+        };
+      };
+    }
+    # the following part is active only when "auth" module is enabled
+    (lib.attrsets.optionalAttrs
+      (options.selfprivacy.modules ? "auth")
+      (lib.mkIf is-auth-enabled {
+        services.forgejo.settings = {
+          auth.DISABLE_LOGIN_FORM = true;
+          service = {
+            DISABLE_REGISTRATION = cfg.disableRegistration;
+            REQUIRE_SIGNIN_VIEW = cfg.requireSigninView;
+            ALLOW_ONLY_EXTERNAL_REGISTRATION = true;
+            SHOW_REGISTRATION_BUTTON = false;
+            ENABLE_BASIC_AUTHENTICATION = false;
+          };
+
+          # disallow explore page and access to private repositories, but allow public
+          "service.explore".REQUIRE_SIGNIN_VIEW = true;
+
+          # TODO control via selfprivacy parameter
+          # "service.explore".DISABLE_USERS_PAGE = true;
+
+          oauth2_client = {
+            REDIRECT_URI = redirect-uri;
+            ACCOUNT_LINKING = "auto";
+            ENABLE_AUTO_REGISTRATION = true;
+            OPENID_CONNECT_SCOPES = "email openid profile";
+          };
+          # doesn't work if LDAP auth source is not active!
+          "cron.sync_external_users" = {
+            ENABLED = true;
+            RUN_AT_START = true;
+            NOTICE_ON_SUCCESS = true;
+          };
+        };
+        systemd.services.forgejo = {
+          preStart =
+            let
+              exe = lib.getExe config.services.forgejo.package;
+              # FIXME skip-tls-verify, bind-password
+              ldapConfigArgs = ''
+                --name LDAP \
+                --active \
+                --security-protocol LDAPS \
+                --skip-tls-verify \
+                --host '${auth-passthru.ldap-host}' \
+                --port '${toString auth-passthru.ldap-port}' \
+                --user-search-base '${auth-passthru.ldap-base-dn}' \
+                --user-filter '(&(class=person)(memberof=${users-group})(name=%s))' \
+                --admin-filter '(&(class=person)(memberof=${admins-group}))' \
+                --username-attribute name \
+                --firstname-attribute name \
+                --surname-attribute displayname \
+                --email-attribute mail \
+                --public-ssh-key-attribute sshPublicKey \
+                --bind-dn 'dn=token' \
+                --bind-password "$(cat ${kanidm-service-account-token-fp})" \
+                --synchronize-users
+              '';
+              oauthConfigArgs = ''
+                --name "${oauth2-provider-name}" \
+                --provider openidConnect \
+                --key forgejo \
+                --secret "$(<${kanidm-oauth-client-secret-fp})" \
+                --group-claim-name groups \
+                --admin-group admins \
+                --auto-discover-url '${auth-passthru.oauth2-discovery-url oauth-client-id}'
+              '';
+            in
+            lib.mkAfter ''
+              set -o xtrace
+
+              # Check if LDAP is already configured
+              ldap_line="$(${exe} admin auth list | grep LDAP | head -n 1)"
+
+              if [[ -n "$ldap_line" ]]; then
+                # update ldap config
+                id="$(echo "$ldap_line" | ${pkgs.gawk}/bin/awk '{print $1}')"
+                ${exe} admin auth update-ldap --id "$id" ${ldapConfigArgs}
+              else
+                # initially configure ldap
+                ${exe} admin auth add-ldap ${ldapConfigArgs}
+              fi
+
+              oauth_line="$(${exe} admin auth list | grep "${oauth2-provider-name}" | head -n 1)"
+              if [[ -n "$oauth_line" ]]; then
+                id="$(echo "$oauth_line" | ${pkgs.gawk}/bin/awk '{print $1}')"
+                ${exe} admin auth update-oauth --id "$id" ${oauthConfigArgs}
+              else
+                ${exe} admin auth add-oauth ${oauthConfigArgs}
+              fi
             '';
-            oauthConfigArgs = ''
-              --name "${oauth2-provider-name}" \
-              --provider openidConnect \
-              --key forgejo \
-              --secret "$(<${kanidm-oauth-client-secret-fp})" \
-              --group-claim-name groups \
-              --admin-group admins \
-              --auto-discover-url '${auth-passthru.oauth2-discovery-url oauth-client-id}'
-            '';
-          in
-          lib.mkIf is-auth-enabled (lib.mkAfter ''
-            set -o xtrace
-
-            # Check if LDAP is already configured
-            ldap_line="$(${exe} admin auth list | grep LDAP | head -n 1)"
-
-            if [[ -n "$ldap_line" ]]; then
-              # update ldap config
-              id="$(echo "$ldap_line" | ${pkgs.gawk}/bin/awk '{print $1}')"
-              ${exe} admin auth update-ldap --id "$id" ${ldapConfigArgs}
-            else
-              # initially configure ldap
-              ${exe} admin auth add-ldap ${ldapConfigArgs}
-            fi
-
-            oauth_line="$(${exe} admin auth list | grep "${oauth2-provider-name}" | head -n 1)"
-            if [[ -n "$oauth_line" ]]; then
-              id="$(echo "$oauth_line" | ${pkgs.gawk}/bin/awk '{print $1}')"
-              ${exe} admin auth update-oauth --id "$id" ${oauthConfigArgs}
-            else
-              ${exe} admin auth add-oauth ${oauthConfigArgs}
-            fi
-          ''
-          );
-        # TODO consider passing oauth consumer service to auth module instead
-        requires = lib.mkIf is-auth-enabled
-          [ auth-passthru.oauth2-systemd-service ];
-      };
-      slices.gitea = {
-        description = "Forgejo service slice";
-      };
-    };
-
-    # for ExecStartPost script to have access to /run/keys/*
-    users.groups.keys.members =
-      lib.mkIf is-auth-enabled [ config.services.forgejo.group ];
-
-    systemd.services.kanidm.serviceConfig.ExecStartPre =
-      lib.mkIf is-auth-enabled [
-        ("-+" + kanidmExecStartPreScriptRoot)
-        ("-" + kanidmExecStartPreScript)
-      ];
-    systemd.services.kanidm.serviceConfig.ExecStartPost =
-      lib.mkIf is-auth-enabled
-        (lib.mkAfter [ ("-" + kanidmExecStartPostScript) ]);
-    services.kanidm.provision = lib.mkIf is-auth-enabled {
-      groups = {
-        "${admins-group}".members = [ "sp.admins" ];
-        "${users-group}".members = [ admins-group ];
-      };
-      systems.oauth2.forgejo = {
-        displayName = "Forgejo";
-        originUrl = redirect-uri;
-        originLanding = "https://${cfg.subdomain}.${sp.domain}/";
-        basicSecretFile = kanidm-oauth-client-secret-fp;
-        # when true, name is passed to a service instead of name@domain
-        preferShortUsername = true;
-        allowInsecureClientDisablePkce = true; # FIXME is it needed?
-        scopeMaps = {
-          "${users-group}" = [
-            "email"
-            "openid"
-            "profile"
-          ];
+          # TODO consider passing oauth consumer service to auth module instead
+          requires = [ auth-passthru.oauth2-systemd-service ];
         };
-        removeOrphanedClaimMaps = true;
-        # NOTE https://github.com/oddlama/kanidm-provision/issues/15
-        # add more scopes when a user is a member of specific group
-        # currently not possible due to https://github.com/kanidm/kanidm/issues/2882#issuecomment-2564490144
-        # supplementaryScopeMaps."${admins-group}" =
-        #   [ "read:admin" "write:admin" ];
-        claimMaps.groups = {
-          joinType = "array";
-          valuesByGroup.${admins-group} = [ "admins" ];
+
+        # for ExecStartPost script to have access to /run/keys/*
+        users.groups.keys.members = [ config.services.forgejo.group ];
+
+        systemd.services.kanidm.serviceConfig.ExecStartPre = [
+          ("-+" + kanidmExecStartPreScriptRoot)
+          ("-" + kanidmExecStartPreScript)
+        ];
+        systemd.services.kanidm.serviceConfig.ExecStartPost =
+          lib.mkAfter [ ("-" + kanidmExecStartPostScript) ];
+
+        services.nginx.virtualHosts."${cfg.subdomain}.${sp.domain}" = {
+          extraConfig = lib.mkAfter ''
+            rewrite ^/user/login$ /user/oauth2/${oauth2-provider-name} last;
+            # FIXME is it needed?
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          '';
         };
-      };
-    };
-  };
+
+        services.kanidm.provision = {
+          groups = {
+            "${admins-group}".members = [ "sp.admins" ];
+            "${users-group}".members = [ admins-group ];
+          };
+          systems.oauth2.forgejo = {
+            displayName = "Forgejo";
+            originUrl = redirect-uri;
+            originLanding = "https://${cfg.subdomain}.${sp.domain}/";
+            basicSecretFile = kanidm-oauth-client-secret-fp;
+            # when true, name is passed to a service instead of name@domain
+            preferShortUsername = true;
+            allowInsecureClientDisablePkce = true; # FIXME is it needed?
+            scopeMaps = {
+              "${users-group}" = [
+                "email"
+                "openid"
+                "profile"
+              ];
+            };
+            removeOrphanedClaimMaps = true;
+            # NOTE https://github.com/oddlama/kanidm-provision/issues/15
+            # add more scopes when a user is a member of specific group
+            # currently not possible due to https://github.com/kanidm/kanidm/issues/2882#issuecomment-2564490144
+            # supplementaryScopeMaps."${admins-group}" =
+            #   [ "read:admin" "write:admin" ];
+            claimMaps.groups = {
+              joinType = "array";
+              valuesByGroup.${admins-group} = [ "admins" ];
+            };
+          };
+        };
+      })
+    )
+  ]);
 }
