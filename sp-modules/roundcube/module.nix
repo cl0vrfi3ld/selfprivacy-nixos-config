@@ -102,7 +102,8 @@ in
         services.kanidm.provision = {
           groups = {
             "sp.roundcube.admins".members = [ "sp.admins" ];
-            "sp.roundcube.users".members = [ "sp.roundcube.admins" ];
+            "sp.roundcube.users".members =
+              [ "sp.roundcube.admins" auth-passthru.full-users-group ];
           };
           systems.oauth2.roundcube = {
             displayName = "Roundcube";

@@ -414,7 +414,8 @@ in
         services.kanidm.provision = {
           groups = {
             "${admins-group}".members = [ "sp.admins" ];
-            "${users-group}".members = [ admins-group ];
+            "${users-group}".members =
+              [ admins-group auth-passthru.full-users-group ];
           };
           systems.oauth2.forgejo = {
             displayName = "Forgejo";

@@ -98,6 +98,7 @@ in
         enable = true;
         autoRemove = true; # if false, obsolete oauth2 scopeMaps remain
         groups."sp.admins".present = true;
+        groups.${passthru.full-users-group}.present = true;
       };
       enableClient = true;
       clientSettings = {
@@ -184,6 +185,8 @@ in
           (lib.strings.splitString "." domain);
       ldap-host = "127.0.0.1";
       ldap-port = 3636;
+
+      full-users-group = "sp.full_users";
     };
   };
 }
