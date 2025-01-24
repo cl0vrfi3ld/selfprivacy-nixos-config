@@ -51,7 +51,7 @@ let
     destination = ldapVirtualMailboxMapFile;
   };
 in
-lib.mkIf is-auth-enabled {
+{
   mailserver.ldap = {
     postfix.mailAttribute = "mail";
     postfix.uidAttribute = "uid";

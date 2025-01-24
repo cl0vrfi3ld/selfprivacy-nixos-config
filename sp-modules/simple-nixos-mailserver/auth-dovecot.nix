@@ -62,7 +62,7 @@ let
     '';
   };
 in
-lib.mkIf is-auth-enabled {
+{
   mailserver.ldap = {
     # note: in `ldapsearch` first comes filter, then attributes
     dovecot.userAttrs = "+"; # all operational attributes
