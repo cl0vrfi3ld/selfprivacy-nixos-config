@@ -101,7 +101,7 @@ in
         };
         services.kanidm.provision = {
           groups = {
-            "sp.roundcube.admins".members = [ "sp.admins" ];
+            "sp.roundcube.admins".members = [ auth-passthru.admins-group ];
             "sp.roundcube.users".members =
               [ "sp.roundcube.admins" auth-passthru.full-users-group ];
           };

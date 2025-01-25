@@ -413,7 +413,7 @@ in
 
         services.kanidm.provision = {
           groups = {
-            "${admins-group}".members = [ "sp.admins" ];
+            "${admins-group}".members = [ auth-passthru.admins-group ];
             "${users-group}".members =
               [ admins-group auth-passthru.full-users-group ];
           };
