@@ -1,5 +1,6 @@
 [
-  [ "passthru", "selfprivacy", "auth" ],
+  [ "passthru", "selfprivacy", "auth", "admins-group" ],
+  [ "passthru", "selfprivacy", "auth", "full-users-group" ],
   [ "security", "acme", "certs" ],
   [ "selfprivacy", "domain" ],
   [ "selfprivacy", "modules", "auth", "enable" ],

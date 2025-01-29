@@ -1,6 +1,10 @@
 [
   [ "mailserver" ],
-  [ "passthru", "selfprivacy", "auth" ],
+  [ "passthru", "selfprivacy", "auth", "ldap-base-dn" ],
+  [ "passthru", "selfprivacy", "auth", "ldap-port" ],
+  [ "passthru", "selfprivacy", "auth", "oauth2-discovery-url" ],
+  [ "passthru", "selfprivacy", "auth", "oauth2-introspection-url" ],
+  [ "passthru", "selfprivacy", "auth", "oauth2-systemd-service" ],
   [ "security", "acme", "certs" ],
   [ "selfprivacy", "domain" ],
   [ "selfprivacy", "hashedMasterPassword" ],
