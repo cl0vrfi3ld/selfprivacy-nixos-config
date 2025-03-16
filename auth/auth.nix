@@ -222,6 +222,7 @@ lib.mkIf config.selfprivacy.sso.enable {
       full-users-group
       ldap-host
       ldap-port
+      keys-path
       ;
     oauth2-introspection-url-prefix = client_id: "https://${client_id}:";
     oauth2-introspection-url-postfix =
@@ -237,5 +238,12 @@ lib.mkIf config.selfprivacy.sso.enable {
         ","
         (x: "dc=" + x)
         (lib.strings.splitString "." domain);
+
+    # TODO consider to pass a value or throw exception if token is not generated
+    mkServiceAccountTokenFP = oauthClientID:
+      "${keys-path}/${oauthClientID}/kanidm-service-account-token";
+
+    mkOAuth2ClientSecretFP = oauthClientID:
+      "${keys-path}/${oauthClientID}/kanidm-oauth-client-secret";
   };
 }

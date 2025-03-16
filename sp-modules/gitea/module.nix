@@ -15,81 +15,23 @@ let
     "gitea-dark"
   ];
   is-auth-enabled = cfg.enableSso && config.selfprivacy.sso.enable;
-  oauth-client-id = "forgejo";
+  oauthClientID = "forgejo";
   auth-passthru = config.selfprivacy.passthru.auth;
   oauth2-provider-name = auth-passthru.oauth2-provider-name;
   redirect-uri =
     "https://${cfg.subdomain}.${sp.domain}/user/oauth2/${oauth2-provider-name}/callback";
 
-  admins-group = "sp.forgejo.admins";
-  users-group = "sp.forgejo.users";
+  adminsGroup = "sp.forgejo.admins";
+  usersGroup = "sp.forgejo.users";
 
-  kanidm-service-account-name = "sp.${oauth-client-id}.service-account";
-  kanidm-service-account-token-name = "${oauth-client-id}-service-account-token";
-  kanidm-service-account-token-fp =
-    "/run/keys/${oauth-client-id}/kanidm-service-account-token"; # FIXME sync with auth module
-  # TODO rewrite to tmpfiles.d
-  kanidmExecStartPreScriptRoot = pkgs.writeShellScript
-    "${oauth-client-id}-kanidm-ExecStartPre-root-script.sh"
-    ''
-      # set-group-ID bit allows kanidm user to create files with another group
-      mkdir -p -v --mode=u+rwx,g+rs,g-w,o-rwx /run/keys/${oauth-client-id}
-      chown kanidm:${config.services.forgejo.group} /run/keys/${oauth-client-id}
-    '';
-  kanidm-oauth-client-secret-fp =
-    "/run/keys/${oauth-client-id}/kanidm-oauth-client-secret";
-  kanidmExecStartPreScript = pkgs.writeShellScript
-    "${oauth-client-id}-kanidm-ExecStartPre-script.sh" ''
-    [ -f "${kanidm-oauth-client-secret-fp}" ] || \
-      "${lib.getExe pkgs.openssl}" rand -base64 -out "${kanidm-oauth-client-secret-fp}" 32
-  '';
-  kanidmExecStartPostScript = pkgs.writeShellScript
-    "${oauth-client-id}-kanidm-ExecStartPost-script.sh"
-    ''
-      export HOME=$RUNTIME_DIRECTORY/client_home
-      readonly KANIDM="${pkgs.kanidm}/bin/kanidm"
+  linuxUserOfService = "gitea";
+  linuxGroupOfService = "gitea";
+  forgejoPackage = pkgs.forgejo;
 
-      # get Kanidm service account for mailserver
-      KANIDM_SERVICE_ACCOUNT="$($KANIDM service-account list --name idm_admin | grep -E "^name: ${kanidm-service-account-name}$")"
-      echo KANIDM_SERVICE_ACCOUNT: "$KANIDM_SERVICE_ACCOUNT"
-      if [ -n "$KANIDM_SERVICE_ACCOUNT" ]
-      then
-          echo "kanidm service account \"${kanidm-service-account-name}\" is found"
-      else
-          echo "kanidm service account \"${kanidm-service-account-name}\" is not found"
-          echo "creating new kanidm service account \"${kanidm-service-account-name}\""
-          if $KANIDM service-account create --name idm_admin "${kanidm-service-account-name}" "${kanidm-service-account-name}" idm_admin
-          then
-              echo "kanidm service account \"${kanidm-service-account-name}\" created"
-          else
-              echo "error: cannot create kanidm service account \"${kanidm-service-account-name}\""
-              exit 1
-          fi
-      fi
-
-      # add Kanidm service account to `idm_mail_servers` group
-      $KANIDM group add-members idm_mail_servers "${kanidm-service-account-name}"
-
-      # create a new read-only token for kanidm
-      if ! KANIDM_SERVICE_ACCOUNT_TOKEN_JSON="$($KANIDM service-account api-token generate --name idm_admin "${kanidm-service-account-name}" "${kanidm-service-account-token-name}" --output json)"
-      then
-          echo "error: kanidm CLI returns an error when trying to generate service-account api-token"
-          exit 1
-      fi
-      if ! KANIDM_SERVICE_ACCOUNT_TOKEN="$(echo "$KANIDM_SERVICE_ACCOUNT_TOKEN_JSON" | ${lib.getExe pkgs.jq} -r .result)"
-      then
-          echo "error: cannot get service-account API token from JSON"
-          exit 1
-      fi
-
-      if ! install --mode=640 \
-      <(printf "%s" "$KANIDM_SERVICE_ACCOUNT_TOKEN") \
-      ${kanidm-service-account-token-fp}
-      then
-          echo "error: cannot write token to \"${kanidm-service-account-token-fp}\""
-          exit 1
-      fi
-    '';
+  serviceAccountTokenFP =
+    auth-passthru.mkServiceAccountTokenFP oauthClientID;
+  oauthClientSecretFP =
+    auth-passthru.mkOAuth2ClientSecretFP oauthClientID;
 in
 {
   options.selfprivacy.modules.gitea = {
@@ -216,15 +158,15 @@ in
       services.gitea.enable = false;
       services.forgejo = {
         enable = true;
-        package = pkgs.forgejo;
+        package = forgejoPackage;
         inherit stateDir;
-        user = "gitea";
-        group = "gitea";
+        user = linuxUserOfService;
+        group = linuxGroupOfService;
         database = {
           type = "sqlite3";
           host = "127.0.0.1";
           name = "gitea";
-          user = "gitea";
+          user = linuxUserOfService;
           path = "${stateDir}/data/gitea.db";
           createDatabase = true;
         };
@@ -281,10 +223,10 @@ in
       users.users.gitea = {
         home = "${stateDir}";
         useDefaultShell = true;
-        group = "gitea";
+        group = linuxGroupOfService;
         isSystemUser = true;
       };
-      users.groups.gitea = { };
+      users.groups.${linuxGroupOfService} = { };
       services.nginx.virtualHosts."${cfg.subdomain}.${sp.domain}" = {
         useACMEHost = sp.domain;
         forceSSL = true;
@@ -315,7 +257,7 @@ in
         };
       };
     }
-    # the following part is active only when "auth" module is enabled
+    # the following part is active only when enableSso = true
     (lib.mkIf is-auth-enabled {
       services.forgejo.settings = {
         auth.DISABLE_LOGIN_FORM = true;
@@ -359,25 +301,25 @@ in
               --host '${auth-passthru.ldap-host}' \
               --port '${toString auth-passthru.ldap-port}' \
               --user-search-base '${auth-passthru.ldap-base-dn}' \
-              --user-filter '(&(class=person)(memberof=${users-group})(name=%s))' \
-              --admin-filter '(&(class=person)(memberof=${admins-group})' \
+              --user-filter '(&(class=person)(memberof=${usersGroup})(name=%s))' \
+              --admin-filter '(&(class=person)(memberof=${adminsGroup})' \
               --username-attribute name \
               --firstname-attribute name \
               --surname-attribute displayname \
               --email-attribute mail \
               --public-ssh-key-attribute sshPublicKey \
               --bind-dn 'dn=token' \
-              --bind-password "$(cat ${kanidm-service-account-token-fp})" \
+              --bind-password "$(< ${serviceAccountTokenFP})" \
               --synchronize-users
             '';
             oauthConfigArgs = ''
               --name "${oauth2-provider-name}" \
               --provider openidConnect \
               --key forgejo \
-              --secret "$(<${kanidm-oauth-client-secret-fp})" \
+              --secret "$(< ${oauthClientSecretFP})" \
               --group-claim-name groups \
               --admin-group admins \
-              --auto-discover-url '${auth-passthru.oauth2-discovery-url oauth-client-id}'
+              --auto-discover-url '${auth-passthru.oauth2-discovery-url oauthClientID}'
             '';
           in
           lib.mkAfter ''
@@ -403,20 +345,7 @@ in
               ${exe} admin auth add-oauth ${oauthConfigArgs}
             fi
           '';
-        # TODO consider passing oauth consumer service to auth module instead
-        after = [ auth-passthru.oauth2-systemd-service ];
-        requires = [ auth-passthru.oauth2-systemd-service ];
       };
-
-      # for ExecStartPost script to have access to /run/keys/*
-      users.groups.keys.members = [ config.services.forgejo.group ];
-
-      systemd.services.kanidm.serviceConfig.ExecStartPre = [
-        ("-+" + kanidmExecStartPreScriptRoot)
-        ("-" + kanidmExecStartPreScript)
-      ];
-      systemd.services.kanidm.serviceConfig.ExecStartPost =
-        lib.mkAfter [ ("-" + kanidmExecStartPostScript) ];
 
       services.nginx.virtualHosts."${cfg.subdomain}.${sp.domain}" = {
         extraConfig = lib.mkAfter ''
@@ -426,38 +355,15 @@ in
         '';
       };
 
-      services.kanidm.provision = {
-        groups = {
-          "${admins-group}".members = [ auth-passthru.admins-group ];
-          "${users-group}".members =
-            [ admins-group auth-passthru.full-users-group ];
-        };
-        systems.oauth2.forgejo = {
-          displayName = "Forgejo";
-          originUrl = redirect-uri;
-          originLanding = "https://${cfg.subdomain}.${sp.domain}/";
-          basicSecretFile = kanidm-oauth-client-secret-fp;
-          # when true, name is passed to a service instead of name@domain
-          preferShortUsername = true;
-          allowInsecureClientDisablePkce = true; # FIXME is it needed?
-          scopeMaps = {
-            "${users-group}" = [
-              "email"
-              "openid"
-              "profile"
-            ];
-          };
-          removeOrphanedClaimMaps = true;
-          # NOTE https://github.com/oddlama/kanidm-provision/issues/15
-          # add more scopes when a user is a member of specific group
-          # currently not possible due to https://github.com/kanidm/kanidm/issues/2882#issuecomment-2564490144
-          # supplementaryScopeMaps."${admins-group}" =
-          #   [ "read:admin" "write:admin" ];
-          claimMaps.groups = {
-            joinType = "array";
-            valuesByGroup.${admins-group} = [ "admins" ];
-          };
-        };
+      selfprivacy.auth.clients."${oauthClientID}" = {
+        inherit adminsGroup usersGroup;
+        subdomain = cfg.subdomain;
+        isTokenNeeded = true;
+        originUrl = redirect-uri;
+        clientSystemdUnits = [ "forgejo.service" ];
+        enablePkce = false; # FIXME maybe Forgejo supports PKCE?
+        linuxUserOfClient = linuxUserOfService;
+        linuxGroupOfClient = linuxGroupOfService;
       };
     })
   ]);
