@@ -99,7 +99,7 @@ in
     enable = config.selfprivacy.ssh.enable;
     settings = {
       PasswordAuthentication = config.selfprivacy.ssh.passwordAuthentication;
-      PermitRootLogin = "yes";
+      PermitRootLogin = "prohibit-password";
       LoginGraceTime = 0;
     };
     openFirewall = false;
