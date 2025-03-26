@@ -359,6 +359,8 @@ in
         inherit adminsGroup usersGroup;
         subdomain = cfg.subdomain;
         isTokenNeeded = true;
+        originLanding =
+          "https://${cfg.subdomain}.${sp.domain}/user/login?redirect_to=%2f";
         originUrl = redirect-uri;
         clientSystemdUnits = [ "forgejo.service" ];
         enablePkce = false; # FIXME maybe Forgejo supports PKCE?
