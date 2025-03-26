@@ -122,6 +122,11 @@ in
                 "Name of users group in Kanidm, whose members have user level access to resources (service) associated with OAuth2 client authorization.";
               default = null;
             };
+            originLanding = mkOption {
+              type = types.nullOr lib.types.str;
+              description =
+                "The origin landing of the service for OAuth2 redirects.";
+            };
             originUrl = mkOption {
               type = types.nullOr lib.types.str;
               description =
@@ -238,6 +243,10 @@ in
             if attrs.linuxGroupOfClient == null
             then clientID
             else attrs.linuxGroupOfClient;
+          originLanding =
+            if attrs.originLanding == null
+            then "https://${attrs.subdomain}.${config.selfprivacy.domain}/"
+            else attrs.originLanding;
           scopeMaps =
             if attrs.scopeMaps == null
             then { "${usersGroup}" = [ "email" "openid" "profile" ]; }
@@ -282,6 +291,7 @@ in
          , clientID
          , displayName
          , enablePkce
+         , originLanding
          , originUrl
          , scopeMaps
          , useShortPreferredUsername
@@ -301,10 +311,9 @@ in
               claimMaps
               displayName
               originUrl
+              originLanding
               scopeMaps
               ;
-            originLanding =
-              "https://${subdomain}.${config.selfprivacy.domain}/";
             preferShortUsername = useShortPreferredUsername;
             allowInsecureClientDisablePkce = ! enablePkce;
             removeOrphanedClaimMaps = true;
