@@ -100,6 +100,12 @@ lib.mkIf config.selfprivacy.sso.enable {
     )
   ];
 
+  networking.hosts = {
+    # Allow the services to communicate with kanidm even if
+    # there is no DNS record yet
+    "127.0.0.1" = [ auth-fqdn ];
+  };
+
 
   # kanidm uses TLS in internal connection with nginx too
   # FIXME revise this: maybe kanidm must not have access to a public TLS
