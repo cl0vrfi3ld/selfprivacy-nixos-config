@@ -683,7 +683,7 @@ in
         assertGroupsKnown =
           opt: groups:
           let
-            knownGroups = attrNames (filterPresent cfg.provision.groups);
+            knownGroups = attrNames (filterPresent cfg.provision.groups) ++ [ "idm_all_persons" ];
             unknownGroups = subtractLists knownGroups groups;
           in
           {
