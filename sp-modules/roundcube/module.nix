@@ -47,10 +47,11 @@ in
     enableSso = (lib.mkOption {
       default = false;
       type = lib.types.bool;
-      description = "Enable SSO for Roundcube";
+      description = "Enable Single Sign-On";
     }) // {
       meta = {
-        type = "enable";
+        type = "bool";
+        weight = 1;
       };
     };
   };
@@ -105,8 +106,6 @@ in
         $config['oauth_identity_fields'] = ['email'];
         $config['oauth_login_redirect'] = true;
         $config['auto_create_user'] = true;
-        $config['oauth_verify_peer'] = false; # FIXME
-        # $config['oauth_pkce'] = 'S256'; # FIXME
       '';
       systemd.services.roundcube = {
         after = [ auth-passthru.oauth2-systemd-service ];
