@@ -8,66 +8,12 @@ let
     group
     is-auth-enabled
     ;
-
-  mailserver-service-account-name = "sp.mailserver.service-account";
-  mailserver-service-account-token-name = "mailserver-service-account-token";
-  mailserver-service-account-token-fp =
-    "/run/keys/${group}/kanidm-service-account-token"; # FIXME sync with auth module
-  kanidmExecStartPreScriptRoot = pkgs.writeShellScript
-    "mailserver-kanidm-ExecStartPre-root-script.sh"
-    ''
-      # set-group-ID bit allows for kanidm user to create files inheriting group
-      mkdir -p -v --mode=u+rwx,g+rs,g-w,o-rwx /run/keys/${group}
-      chown kanidm:${group} /run/keys/${group}
-    '';
-  # create service account token, needed for LDAP
-  kanidmExecStartPostScript = pkgs.writeShellScript
-    "mailserver-kanidm-ExecStartPost-script.sh"
-    ''
-      export HOME=$RUNTIME_DIRECTORY/client_home
-      readonly KANIDM="${pkgs.kanidm}/bin/kanidm"
-
-      # get Kanidm service account for mailserver
-      KANIDM_SERVICE_ACCOUNT="$($KANIDM service-account list --name idm_admin | grep -E "^name: ${mailserver-service-account-name}$")"
-      echo KANIDM_SERVICE_ACCOUNT: "$KANIDM_SERVICE_ACCOUNT"
-      if [ -n "$KANIDM_SERVICE_ACCOUNT" ]
-      then
-          echo "kanidm service account \"${mailserver-service-account-name}\" is found"
-      else
-          echo "kanidm service account \"${mailserver-service-account-name}\" is not found"
-          echo "creating new kanidm service account \"${mailserver-service-account-name}\""
-          if $KANIDM service-account create --name idm_admin ${mailserver-service-account-name} ${mailserver-service-account-name} idm_admin
-          then
-              "kanidm service account \"${mailserver-service-account-name}\" created"
-          else
-              echo "error: cannot create kanidm service account \"${mailserver-service-account-name}\""
-              exit 1
-          fi
-      fi
-
-      # add Kanidm service account to `idm_mail_servers` group
-      $KANIDM group add-members idm_mail_servers ${mailserver-service-account-name}
-
-      # create a new read-only token for mailserver
-      if ! KANIDM_SERVICE_ACCOUNT_TOKEN_JSON="$($KANIDM service-account api-token generate --name idm_admin ${mailserver-service-account-name} ${mailserver-service-account-token-name} --output json)"
-      then
-          echo "error: kanidm CLI returns an error when trying to generate service-account api-token"
-          exit 1
-      fi
-      if ! KANIDM_SERVICE_ACCOUNT_TOKEN="$(echo "$KANIDM_SERVICE_ACCOUNT_TOKEN_JSON" | ${lib.getExe pkgs.jq} -r .result)"
-      then
-          echo "error: cannot get service-account API token from JSON"
-          exit 1
-      fi
-
-      if ! install --mode=640 \
-      <(printf "%s" "$KANIDM_SERVICE_ACCOUNT_TOKEN") \
-      ${mailserver-service-account-token-fp}
-      then
-          echo "error: cannot write token to \"${mailserver-service-account-token-fp}\""
-          exit 1
-      fi
-    '';
+  mailserver-service-account = {
+    mailserver-service-account-name = "sp.mailserver.service-account";
+    mailserver-service-account-token-name = "mailserver-service-account-token";
+    mailserver-service-account-token-fp =
+      "/run/keys/${group}/kanidm-service-account-token"; # FIXME sync with auth module
+  };
 in
 lib.mkIf sp.modules.simple-nixos-mailserver.enable (lib.mkMerge [
   {
@@ -198,7 +144,8 @@ lib.mkIf sp.modules.simple-nixos-mailserver.enable (lib.mkMerge [
         # bind.dn = "uid=mail,ou=persons," + ldap_base_dn;
         bind.dn = "dn=token";
         # TODO change in this file should trigger system restart dovecot
-        bind.passwordFile = mailserver-service-account-token-fp;
+        bind.passwordFile =
+          mailserver-service-account.mailserver-service-account-token-fp;
 
         # searchBase = "ou=persons," + ldap_base_dn;
         searchBase = auth-passthru.ldap-base-dn; # TODO refine this
@@ -207,14 +154,8 @@ lib.mkIf sp.modules.simple-nixos-mailserver.enable (lib.mkMerge [
         uris = [ "ldaps://localhost:${toString auth-passthru.ldap-port}" ];
       };
     };
-    # FIXME set auth module option instead
-    systemd.services.kanidm.serviceConfig.ExecStartPre = lib.mkBefore [
-      ("-+" + kanidmExecStartPreScriptRoot)
-    ];
-    systemd.services.kanidm.serviceConfig.ExecStartPost = lib.mkAfter [
-      ("-" + kanidmExecStartPostScript)
-    ];
   })
-  (lib.mkIf is-auth-enabled (import ./auth-dovecot.nix nixos-args))
+  (lib.mkIf is-auth-enabled
+    (import ./auth-dovecot.nix mailserver-service-account nixos-args))
   (lib.mkIf is-auth-enabled (import ./auth-postfix.nix nixos-args))
 ])
