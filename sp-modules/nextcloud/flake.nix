@@ -29,7 +29,7 @@
       sourcePage = "https://github.com/nextcloud";
       supportLevel = "normal";
       sso = {
-        accessGroup = "sp.nextcloud.users";
+        userGroup = "sp.nextcloud.users";
         adminGroup = "sp.nextcloud.admins";
       };
     };

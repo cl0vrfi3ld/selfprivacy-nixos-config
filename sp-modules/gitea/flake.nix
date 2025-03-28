@@ -27,7 +27,7 @@
       sourcePage = "https://codeberg.org/forgejo/forgejo";
       supportLevel = "normal";
       sso = {
-        accessGroup = "sp.gitea.users";
+        userGroup = "sp.gitea.users";
         adminGroup = "sp.gitea.admins";
       };
     };

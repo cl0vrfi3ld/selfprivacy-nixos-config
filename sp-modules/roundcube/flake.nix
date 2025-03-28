@@ -28,7 +28,7 @@
       sourcePage = "https://github.com/roundcube/roundcubemail";
       supportLevel = "normal";
       sso = {
-        accessGroup = "sp.roundcube.users";
+        userGroup = "sp.roundcube.users";
         adminGroup = "sp.roundcube.admins";
       };
     };
