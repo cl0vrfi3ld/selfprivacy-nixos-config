@@ -17,7 +17,6 @@ let
 
   occ = "${config.services.nextcloud.occ}/bin/nextcloud-occ";
 
-  nextcloud-secret-file = "/var/lib/nextcloud/secrets.json";
   nextcloud-setup-group =
     config.systemd.services.nextcloud-setup.serviceConfig.Group;
 
@@ -273,8 +272,6 @@ in
           adminpassFile = admin-pass-filepath;
           adminuser = "admin";
         };
-
-        secretFile = lib.mkIf is-auth-enabled nextcloud-secret-file;
       };
       services.nginx.virtualHosts.${hostName} = {
         useACMEHost = sp.domain;
