@@ -109,10 +109,10 @@ in
       '';
       systemd.services.roundcube = {
         after = [ auth-passthru.oauth2-systemd-service ];
-        requires = [ auth-passthru.oauth2-systemd-service ];
+        requires = [ auth-passthru.oauth2-systemd-service "dovecot2.service" ];
       };
       systemd.services.kanidm = {
-        serviceConfig.ExecStartPre = lib.mkBefore [
+        serviceConfig.ExecStartPre = lib.mkAfter [
           ("-+" + kanidmExecStartPreScriptRoot)
         ];
       };

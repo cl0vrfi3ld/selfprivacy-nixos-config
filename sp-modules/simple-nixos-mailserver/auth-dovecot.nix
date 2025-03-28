@@ -137,7 +137,7 @@ in
     serviceConfig.RuntimeDirectory = lib.mkForce [ runtime-directory ];
   };
 
-  systemd.services.kanidm.serviceConfig.ExecStartPre = lib.mkAfter [
+  systemd.services.kanidm.serviceConfig.ExecStartPre = lib.mkBefore [
     ("-" + oauth-secret-ExecStartPreScript)
   ];
   # does it merge with existing restartTriggers?
