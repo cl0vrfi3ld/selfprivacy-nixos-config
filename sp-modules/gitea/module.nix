@@ -21,8 +21,9 @@ let
   redirect-uri =
     "https://${cfg.subdomain}.${sp.domain}/user/oauth2/${oauth2-provider-name}/callback";
 
-  adminsGroup = "sp.forgejo.admins";
-  usersGroup = "sp.forgejo.users";
+  # SelfPrivacy uses SP Module ID to identify the group!
+  adminsGroup = "sp.gitea.admins";
+  usersGroup = "sp.gitea.users";
 
   linuxUserOfService = "gitea";
   linuxGroupOfService = "gitea";
@@ -128,15 +129,22 @@ in
     enableSso = (lib.mkOption {
       default = false;
       type = lib.types.bool;
-      description = "Enable SSO for Forgejo";
+      description = "Enable Single Sign-On";
     }) // {
       meta = {
-        type = "enable";
+        type = "bool";
+        weight = 7;
       };
     };
-    debug = lib.mkOption {
+    debug = (lib.mkOption {
       default = false;
       type = lib.types.bool;
+      description = "Enable debug logging";
+    }) // {
+      meta = {
+        type = "bool";
+        weight = 8;
+      };
     };
   };
 
