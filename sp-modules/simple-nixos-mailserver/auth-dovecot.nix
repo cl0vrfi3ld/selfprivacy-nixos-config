@@ -87,7 +87,7 @@ in
   };
 
   services.dovecot2.extraConfig = ''
-    auth_mechanisms = xoauth2 oauthbearer
+    auth_mechanisms = xoauth2 oauthbearer plain login
 
     passdb {
       driver = oauth2
