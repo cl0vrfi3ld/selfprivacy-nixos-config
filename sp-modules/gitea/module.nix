@@ -374,6 +374,10 @@ in
         enablePkce = false; # FIXME maybe Forgejo supports PKCE?
         linuxUserOfClient = linuxUserOfService;
         linuxGroupOfClient = linuxGroupOfService;
+        claimMaps.groups = {
+          joinType = "array";
+          valuesByGroup.${adminsGroup} = [ "admins" ];
+        };
       };
     })
   ]);
