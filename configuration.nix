@@ -139,7 +139,7 @@ in
     pkgs.writeShellScript "flake-update-script" ''
       set -o xtrace
       if ${config.nix.package.out}/bin/nix flake update \
-      --override-input selfprivacy-nixos-config git+https://git.selfprivacy.org/SelfPrivacy/selfprivacy-nixos-config.git?ref=flakes
+      --override-input selfprivacy-nixos-config git+https://git.selfprivacy.org/SelfPrivacy/selfprivacy-nixos-config.git?ref=sso
       then
           if ${pkgs.diffutils}/bin/diff -u -r /etc/selfprivacy/nixos-config-source/ /etc/nixos/
           then
