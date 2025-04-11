@@ -204,7 +204,6 @@ in
       );
     };
   };
-  # (lib.debug.traceValSeq
   config = lib.mkIf config.selfprivacy.sso.enable (
     let
       clientsAttrsList = lib.attrsets.mapAttrsToList
@@ -299,7 +298,6 @@ in
          , originUrl
          , scopeMaps
          , useShortPreferredUsername
-         , subdomain
          , usersGroup
          , ...
          }: {

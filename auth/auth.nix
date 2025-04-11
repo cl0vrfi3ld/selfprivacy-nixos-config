@@ -246,10 +246,10 @@ lib.mkIf config.selfprivacy.sso.enable {
         (lib.strings.splitString "." domain);
 
     # TODO consider to pass a value or throw exception if token is not generated
-    mkServiceAccountTokenFP = oauthClientID:
-      "${keys-path}/${oauthClientID}/kanidm-service-account-token";
+    mkServiceAccountTokenFP = linuxGroup:
+      "${keys-path}/${linuxGroup}/kanidm-service-account-token";
 
-    mkOAuth2ClientSecretFP = oauthClientID:
-      "${keys-path}/${oauthClientID}/kanidm-oauth-client-secret";
+    mkOAuth2ClientSecretFP = linuxGroup:
+      "${keys-path}/${linuxGroup}/kanidm-oauth-client-secret";
   };
 }
