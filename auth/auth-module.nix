@@ -7,14 +7,6 @@ let
   auth-passthru = config.selfprivacy.passthru.auth;
   keys-path = auth-passthru.keys-path;
   # TODO consider tmpfiles.d for creating a directory in ${keys-path}
-  mkKanidmExecStartPreScriptRoot = oauthClientID: group:
-    pkgs.writeShellScript
-      "${oauthClientID}-kanidm-ExecStartPre-root-script.sh"
-      ''
-        # set-group-ID bit allows kanidm user to create files with another group
-        mkdir -p -v --mode=u+rwx,g+rs,g-w,o-rwx ${keys-path}/${oauthClientID}
-        chown kanidm:${group} ${keys-path}/${oauthClientID}
-      '';
   # generate OAuth2 client secret
   mkKanidmExecStartPreScript = oauthClientID:
     let
@@ -261,6 +253,17 @@ in
         ({ linuxUserOfClient, ... }: [ linuxUserOfClient ])
       );
 
+      systemd.tmpfiles.settings."kanidm-secrets" = lib.mkMerge (lib.forEach
+        clientsAttrsList
+        ({ linuxGroupOfClient, ... }: {
+          "${keys-path}/${linuxGroupOfClient}".d = {
+            user = "kanidm";
+            group = linuxGroupOfClient;
+            mode = "2750";
+          };
+        })
+      );
+
       # for each OAuth2 client: scripts with Kanidm CLI commands
       systemd.services.kanidm = {
         before =
@@ -270,11 +273,9 @@ in
         serviceConfig =
           lib.mkMerge (lib.forEach
             clientsAttrsList
-            ({ clientID, isTokenNeeded, linuxGroupOfClient, ... }: {
+            ({ clientID, isTokenNeeded, ... }: {
               ExecStartPre = [
                 # "-" prefix means to ignore exit code of prefixed script
-                # "+" prefix means to run script with superuser priveleges
-                ("-+" + mkKanidmExecStartPreScriptRoot clientID linuxGroupOfClient)
                 ("-" + mkKanidmExecStartPreScript clientID)
               ];
               ExecStartPost = lib.mkIf isTokenNeeded
