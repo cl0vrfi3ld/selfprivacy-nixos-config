@@ -20,6 +20,7 @@ let
   oauth2-provider-name = auth-passthru.oauth2-provider-name;
   redirect-uri =
     "https://${cfg.subdomain}.${sp.domain}/user/oauth2/${oauth2-provider-name}/callback";
+  oauthDiscoveryURL = auth-passthru.oauth2-discovery-url oauthClientID;
 
   # SelfPrivacy uses SP Module ID to identify the group!
   adminsGroup = "sp.gitea.admins";
@@ -299,6 +300,23 @@ in
       systemd.services.forgejo = {
         preStart =
           let
+            waitForURL = url: maxRetries: delaySec: ''
+              for ((i=1; i<=${toString maxRetries}; i++))
+              do
+                  if ${lib.getExe pkgs.curl} -X GET --silent --fail "${url}" > /dev/null
+                  then
+                      echo "${url} responds to GET HTTP request (attempt #$i)"
+                      exit 0
+                  else
+                      echo "${url} does not respond to GET HTTP request (attempt #$i)"
+                      echo sleeping for ${toString delaySec} seconds
+                  fi
+                  sleep ${toString delaySec}
+              done
+              echo "error, max attempts to access "${url}" have been used unsuccessfully!"
+              exit 124
+            '';
+
             exe = lib.getExe config.services.forgejo.package;
             # FIXME skip-tls-verify, bind-password
             ldapConfigArgs = ''
@@ -327,32 +345,35 @@ in
               --secret "$(< ${oauthClientSecretFP})" \
               --group-claim-name groups \
               --admin-group admins \
-              --auto-discover-url '${auth-passthru.oauth2-discovery-url oauthClientID}'
+              --auto-discover-url '${oauthDiscoveryURL}'
             '';
           in
-          lib.mkAfter ''
-            set -o xtrace
+          lib.mkMerge [
+            (waitForURL oauthDiscoveryURL 10 10)
+            (lib.mkAfter ''
+              set -o xtrace
 
-            # Check if LDAP is already configured
-            ldap_line="$(${exe} admin auth list | grep LDAP | head -n 1)"
+              # Check if LDAP is already configured
+              ldap_line="$(${exe} admin auth list | grep LDAP | head -n 1)"
 
-            if [[ -n "$ldap_line" ]]; then
-              # update ldap config
-              id="$(echo "$ldap_line" | ${pkgs.gawk}/bin/awk '{print $1}')"
-              ${exe} admin auth update-ldap --id "$id" ${ldapConfigArgs}
-            else
-              # initially configure ldap
-              ${exe} admin auth add-ldap ${ldapConfigArgs}
-            fi
+              if [[ -n "$ldap_line" ]]; then
+                # update ldap config
+                id="$(echo "$ldap_line" | ${pkgs.gawk}/bin/awk '{print $1}')"
+                ${exe} admin auth update-ldap --id "$id" ${ldapConfigArgs}
+              else
+                # initially configure ldap
+                ${exe} admin auth add-ldap ${ldapConfigArgs}
+              fi
 
-            oauth_line="$(${exe} admin auth list | grep "${oauth2-provider-name}" | head -n 1)"
-            if [[ -n "$oauth_line" ]]; then
-              id="$(echo "$oauth_line" | ${pkgs.gawk}/bin/awk '{print $1}')"
-              ${exe} admin auth update-oauth --id "$id" ${oauthConfigArgs}
-            else
-              ${exe} admin auth add-oauth ${oauthConfigArgs}
-            fi
-          '';
+              oauth_line="$(${exe} admin auth list | grep "${oauth2-provider-name}" | head -n 1)"
+              if [[ -n "$oauth_line" ]]; then
+                id="$(echo "$oauth_line" | ${pkgs.gawk}/bin/awk '{print $1}')"
+                ${exe} admin auth update-oauth --id "$id" ${oauthConfigArgs}
+              else
+                ${exe} admin auth add-oauth ${oauthConfigArgs}
+              fi
+            '')
+          ];
       };
 
       services.nginx.virtualHosts."${cfg.subdomain}.${sp.domain}" = {
