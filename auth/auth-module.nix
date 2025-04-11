@@ -8,9 +8,9 @@ let
   keys-path = auth-passthru.keys-path;
   # TODO consider tmpfiles.d for creating a directory in ${keys-path}
   # generate OAuth2 client secret
-  mkKanidmExecStartPreScript = oauthClientID:
+  mkKanidmExecStartPreScript = oauthClientID: linuxGroup:
     let
-      secretFP = auth-passthru.mkOAuth2ClientSecretFP oauthClientID;
+      secretFP = auth-passthru.mkOAuth2ClientSecretFP linuxGroup;
     in
     pkgs.writeShellScript
       "${oauthClientID}-kanidm-ExecStartPre-script.sh" ''
@@ -18,12 +18,12 @@ let
         "${lib.getExe pkgs.openssl}" rand -base64 -out "${secretFP}" 32 && \
         chmod 640 "${secretFP}"
     '';
-  mkKanidmExecStartPostScript = oauthClientID:
+  mkKanidmExecStartPostScript = oauthClientID: linuxGroup:
     let
       kanidmServiceAccountName = "sp.${oauthClientID}.service-account";
       kanidmServiceAccountTokenName = "${oauthClientID}-service-account-token";
       kanidmServiceAccountTokenFP =
-        auth-passthru.mkServiceAccountTokenFP oauthClientID;
+        auth-passthru.mkServiceAccountTokenFP linuxGroup;
     in
     pkgs.writeShellScript
       "${oauthClientID}-kanidm-ExecStartPost-script.sh"
@@ -226,7 +226,7 @@ in
             then "sp.${clientID}.users"
             else attrs.usersGroup;
           basicSecretFile =
-            "${keys-path}/${clientID}/kanidm-oauth-client-secret";
+            "${keys-path}/${linuxGroupOfClient}/kanidm-oauth-client-secret";
           linuxUserOfClient =
             if attrs.linuxUserOfClient == null
             then clientID
@@ -273,13 +273,16 @@ in
         serviceConfig =
           lib.mkMerge (lib.forEach
             clientsAttrsList
-            ({ clientID, isTokenNeeded, ... }: {
+            ({ clientID, isTokenNeeded, linuxGroupOfClient, ... }: {
               ExecStartPre = [
                 # "-" prefix means to ignore exit code of prefixed script
-                ("-" + mkKanidmExecStartPreScript clientID)
+                ("-" + mkKanidmExecStartPreScript clientID linuxGroupOfClient)
               ];
               ExecStartPost = lib.mkIf isTokenNeeded
-                (lib.mkAfter [ ("-" + mkKanidmExecStartPostScript clientID) ]);
+                (lib.mkAfter [
+                  ("-" +
+                    mkKanidmExecStartPostScript clientID linuxGroupOfClient)
+                ]);
             }));
       };
 
