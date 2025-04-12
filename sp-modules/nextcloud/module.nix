@@ -413,5 +413,12 @@ in
         };
       };
     })
+    (lib.mkIf (! is-auth-enabled) {
+      systemd.services.nextcloud-setup = {
+        script = ''
+          ${occ} app:disable user_oidc
+        '';
+      };
+    })
   ]);
 }
