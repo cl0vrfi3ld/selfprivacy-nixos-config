@@ -306,15 +306,18 @@ in
                   if ${lib.getExe pkgs.curl} -X GET --silent --fail "${url}" > /dev/null
                   then
                       echo "${url} responds to GET HTTP request (attempt #$i)"
-                      exit 0
+                      break
                   else
                       echo "${url} does not respond to GET HTTP request (attempt #$i)"
                       echo sleeping for ${toString delaySec} seconds
                   fi
                   sleep ${toString delaySec}
               done
-              echo "error, max attempts to access "${url}" have been used unsuccessfully!"
-              exit 124
+              if [[ "$i" > "${toString maxRetries}" ]]
+              then
+                  echo "error, max attempts to access "${url}" have been used unsuccessfully!"
+                  exit 124
+              fi
             '';
 
             exe = lib.getExe config.services.forgejo.package;
