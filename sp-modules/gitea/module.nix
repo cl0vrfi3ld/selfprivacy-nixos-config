@@ -31,9 +31,9 @@ let
   forgejoPackage = pkgs.forgejo;
 
   serviceAccountTokenFP =
-    auth-passthru.mkServiceAccountTokenFP oauthClientID;
+    auth-passthru.mkServiceAccountTokenFP linuxGroupOfService;
   oauthClientSecretFP =
-    auth-passthru.mkOAuth2ClientSecretFP oauthClientID;
+    auth-passthru.mkOAuth2ClientSecretFP linuxGroupOfService;
 in
 {
   options.selfprivacy.modules.gitea = {
