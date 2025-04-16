@@ -390,6 +390,7 @@ in
       selfprivacy.auth.clients."${oauthClientID}" = {
         inherit adminsGroup usersGroup;
         imageFile = "${pkgs.forgejo.data}/public/assets/img/logo.svg";
+        displayName = "Forgejo";
         subdomain = cfg.subdomain;
         isTokenNeeded = true;
         originLanding =
