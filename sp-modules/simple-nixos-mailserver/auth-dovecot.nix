@@ -13,15 +13,9 @@ let
     is-auth-enabled
     ;
 
-  runtime-directory = group;
+  runtime-folder = group;
+  keysPath = auth-passthru.keys-path;
 
-  kanidmExecStartPreScriptRoot = pkgs.writeShellScript
-    "mailserver-kanidm-ExecStartPre-root-script.sh"
-    ''
-      # set-group-ID bit allows for kanidm user to create files inheriting group
-      mkdir -p -v --mode=u+rwx,g+rs,g-w,o-rwx /run/keys/${group}
-      chown kanidm:${group} /run/keys/${group}
-    '';
   # create service account token, needed for LDAP
   kanidmExecStartPostScript = pkgs.writeShellScript
     "mailserver-kanidm-ExecStartPost-script.sh"
@@ -71,7 +65,7 @@ let
       fi
     '';
 
-  ldapConfFile = "/run/${runtime-directory}/dovecot-ldap.conf.ext";
+  ldapConfFile = "/run/${runtime-folder}/dovecot-ldap.conf.ext";
   mkLdapSearchScope = scope: (
     if scope == "sub" then "subtree"
     else if scope == "one" then "onelevel"
@@ -108,14 +102,14 @@ let
   };
   oauth-client-id = "mailserver";
   oauth-client-secret-fp =
-    "/run/keys/${group}/kanidm-oauth-client-secret";
+    "${keysPath}/${group}/kanidm-oauth-client-secret";
   oauth-secret-ExecStartPreScript = pkgs.writeShellScript
     "${oauth-client-id}-kanidm-ExecStartPre-script.sh" ''
     set -o xtrace
     [ -f "${oauth-client-secret-fp}" ] || \
       "${lib.getExe pkgs.openssl}" rand -base64 32 | tr "\n:@/+=" "012345" > "${oauth-client-secret-fp}"
   '';
-  dovecot-oauth2-conf-fp = "/run/${runtime-directory}/dovecot-oauth2.conf.ext";
+  dovecot-oauth2-conf-fp = "/run/${runtime-folder}/dovecot-oauth2.conf.ext";
   write-dovecot-oauth2-conf = appendSetting {
     name = "oauth2-conf-file";
     file = builtins.toFile "dovecot-oauth2.conf.ext.template" ''
@@ -136,8 +130,13 @@ let
   };
 in
 {
-  # for dovecot2 to have access to get through /run/keys directory
+  # for dovecot2 to have access to get through ${keysPath} directory
   users.groups.keys.members = [ group ];
+  systemd.tmpfiles.settings."kanidm-secrets"."${keysPath}/${group}".d = {
+    user = "kanidm";
+    inherit group;
+    mode = "2750";
+  };
 
   mailserver.ldap = {
     # note: in `ldapsearch` first comes filter, then attributes
@@ -189,24 +188,19 @@ in
   '';
   services.dovecot2.enablePAM = false;
   systemd.services.dovecot2 = {
-    # TODO does it merge with existing preStart?
     preStart = setPwdInLdapConfFile + "\n" + write-dovecot-oauth2-conf + "\n";
-    # FIXME pass dependant services to auth module option instead?
     after = [ auth-passthru.oauth2-systemd-service ];
     requires = [ auth-passthru.oauth2-systemd-service ];
-    serviceConfig.RuntimeDirectory = lib.mkForce [ runtime-directory ];
+    serviceConfig.RuntimeDirectory = lib.mkForce [ runtime-folder ];
   };
 
-  # FIXME set auth module option instead
   systemd.services.kanidm.serviceConfig.ExecStartPre = lib.mkBefore [
-    ("-+" + kanidmExecStartPreScriptRoot)
     ("-" + oauth-secret-ExecStartPreScript)
   ];
   systemd.services.kanidm.serviceConfig.ExecStartPost = lib.mkAfter [
     ("-" + kanidmExecStartPostScript)
   ];
 
-  # does it merge with existing restartTriggers?
   systemd.services.postfix.restartTriggers = [
     setPwdInLdapConfFile
     write-dovecot-oauth2-conf
