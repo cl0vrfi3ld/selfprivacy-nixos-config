@@ -5,20 +5,24 @@ let
   is-auth-enabled = cfg.enableSso && config.selfprivacy.sso.enable;
   auth-passthru = config.selfprivacy.passthru.auth;
   auth-fqdn = auth-passthru.auth-fqdn;
+
+  linuxUserOfService = "roundcube";
+  linuxGroupOfService = "roundcube";
+
   sp-module-name = "roundcube";
-  user = "roundcube";
-  group = "roundcube";
+
+  # SelfPrivacy uses SP Module ID to identify the group!
+  adminsGroup = "sp.${sp-module-name}.admins";
+  usersGroup = "sp.${sp-module-name}.users";
+
   oauth-donor = config.selfprivacy.passthru.mailserver;
-  kanidm-oauth-client-secret-fp =
-    "/run/keys/${group}/kanidm-oauth-client-secret";
+  oauthClientSecretFP =
+    auth-passthru.mkOAuth2ClientSecretFP linuxGroupOfService;
+  # copy client secret from mailserver
   kanidmExecStartPreScriptRoot = pkgs.writeShellScript
     "${sp-module-name}-kanidm-ExecStartPre-root-script.sh"
     ''
-      # set-group-ID bit allows for kanidm user to create files inheriting group
-      mkdir -p -v --mode=u+rwx,g+rs,g-w,o-rwx /run/keys/${group}
-      chown kanidm:${group} /run/keys/${group}
-
-      install -v -m640 -o kanidm -g ${group} ${oauth-donor.oauth-client-secret-fp} ${kanidm-oauth-client-secret-fp}
+      install -v -m640 -o kanidm -g ${linuxGroupOfService} ${oauth-donor.oauth-client-secret-fp} ${oauthClientSecretFP}
     '';
 in
 {
@@ -91,53 +95,47 @@ in
     }
     # the following part is active only when "auth" module is enabled
     (lib.mkIf is-auth-enabled {
-      # for phpfpm-roundcube to have access to get through /run/keys directory
-      users.groups.keys.members = [ user ];
       services.roundcube.extraConfig = lib.mkAfter ''
         $config['oauth_provider'] = 'generic';
         $config['oauth_provider_name'] = '${auth-passthru.oauth2-provider-name}';
         $config['oauth_client_id'] = '${oauth-donor.oauth-client-id}';
-        $config['oauth_client_secret'] = file_get_contents('${kanidm-oauth-client-secret-fp}');
+        $config['oauth_client_secret'] = file_get_contents('${oauthClientSecretFP}');
         $config['oauth_auth_uri'] = 'https://${auth-fqdn}/ui/oauth2';
         $config['oauth_token_uri'] = 'https://${auth-fqdn}/oauth2/token';
         $config['oauth_identity_uri'] = 'https://${auth-fqdn}/oauth2/openid/${oauth-donor.oauth-client-id}/userinfo';
-        $config['oauth_scope'] = 'email profile openid'; # FIXME
+        $config['oauth_scope'] = 'email profile openid';
         $config['oauth_auth_parameters'] = [];
         $config['oauth_identity_fields'] = ['email'];
         $config['oauth_login_redirect'] = true;
         $config['auto_create_user'] = true;
       '';
       systemd.services.roundcube = {
-        after = [ auth-passthru.oauth2-systemd-service ];
-        requires = [ auth-passthru.oauth2-systemd-service "dovecot2.service" ];
+        after = [ "dovecot2.service" ];
+        requires = [ "dovecot2.service" ];
       };
-      systemd.services.kanidm = {
-        serviceConfig.ExecStartPre = lib.mkAfter [
-          ("-+" + kanidmExecStartPreScriptRoot)
-        ];
-      };
-      services.kanidm.provision = {
-        groups = {
-          "sp.roundcube.admins".members = [ auth-passthru.admins-group ];
-          "sp.roundcube.users".members =
-            [ "sp.roundcube.admins" auth-passthru.full-users-group ];
-        };
-        systems.oauth2.${oauth-donor.oauth-client-id} = {
-          displayName = "Roundcube";
-          originUrl = "https://${cfg.subdomain}.${domain}/index.php/login/oauth";
-          originLanding = "https://${cfg.subdomain}.${domain}/";
-          basicSecretFile = kanidm-oauth-client-secret-fp;
-          # when true, name is passed to a service instead of name@domain
-          preferShortUsername = false;
-          allowInsecureClientDisablePkce = true; # FIXME is it needed?
-          scopeMaps = {
-            "sp.roundcube.users" = [
-              "email"
-              "openid"
-              "profile"
-            ];
-          };
-          removeOrphanedClaimMaps = true;
+      systemd.services.kanidm.serviceConfig.ExecStartPre = lib.mkAfter [
+        ("-+" + kanidmExecStartPreScriptRoot)
+      ];
+
+      selfprivacy.auth.clients."${oauth-donor.oauth-client-id}" = {
+        inherit adminsGroup usersGroup;
+        imageFile = ./icon.svg;
+        displayName = "Roundcube";
+        subdomain = cfg.subdomain;
+        isTokenNeeded = true;
+        originUrl = "https://${cfg.subdomain}.${domain}/index.php/login/oauth";
+        originLanding = "https://${cfg.subdomain}.${domain}/";
+        useShortPreferredUsername = false;
+        clientSystemdUnits = [ "phpfpm-roundcube.service" ];
+        enablePkce = false;
+        linuxUserOfClient = linuxUserOfService;
+        linuxGroupOfClient = linuxGroupOfService;
+        scopeMaps = {
+          "${usersGroup}" = [
+            "email"
+            "openid"
+            "profile"
+          ];
         };
       };
     })
