@@ -14,9 +14,14 @@ let
     in
     pkgs.writeShellScript
       "${oauthClientID}-kanidm-ExecStartPre-script.sh" ''
-      [ -f "${secretFP}" ] || \
-        "${lib.getExe pkgs.openssl}" rand -base64 -out "${secretFP}" 32 && \
+      set -o pipefail
+      set -o errexit
+      if ! [ -f "${secretFP}" ]
+      then
+        "${lib.getExe pkgs.openssl}" rand -base64 32 \
+        | tr "\n:@/+=" "012345" > "${secretFP}"
         chmod 640 "${secretFP}"
+      fi
     '';
   mkKanidmExecStartPostScript = oauthClientID: linuxGroup:
     let
