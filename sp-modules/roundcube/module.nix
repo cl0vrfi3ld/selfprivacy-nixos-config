@@ -122,7 +122,7 @@ in
         imageFile = ./icon.svg;
         displayName = "Roundcube";
         subdomain = cfg.subdomain;
-        isTokenNeeded = true;
+        isTokenNeeded = false;
         originUrl = "https://${cfg.subdomain}.${domain}/index.php/login/oauth";
         originLanding = "https://${cfg.subdomain}.${domain}/";
         useShortPreferredUsername = false;
