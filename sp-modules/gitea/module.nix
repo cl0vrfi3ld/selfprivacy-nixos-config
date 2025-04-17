@@ -313,7 +313,7 @@ in
                   fi
                   sleep ${toString delaySec}
               done
-              if [[ "$i" > "${toString maxRetries}" ]]
+              if [[ "$i" -gt "${toString maxRetries}" ]]
               then
                   echo "error, max attempts to access "${url}" have been used unsuccessfully!"
                   exit 124
