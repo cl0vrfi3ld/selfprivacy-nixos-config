@@ -326,7 +326,8 @@ in
         subdomain = cfg.subdomain;
         isTokenNeeded = true;
         originUrl = "https://${cfg.subdomain}.${domain}/apps/user_oidc/code";
-        originLanding = "https://${cfg.subdomain}.${domain}/";
+        originLanding =
+          "https://${cfg.subdomain}.${domain}/apps/user_oidc/login/1";
         useShortPreferredUsername = true;
         clientSystemdUnits =
           [ "nextcloud-setup.service" "phpfpm-nextcloud.service" ];
