@@ -113,7 +113,7 @@ let
     "${oauth-client-id}-kanidm-ExecStartPre-script.sh" ''
     set -o xtrace
     [ -f "${oauth-client-secret-fp}" ] || \
-      "${lib.getExe pkgs.openssl}" rand -base64 32 | tr -d "\n" > "${oauth-client-secret-fp}"
+      "${lib.getExe pkgs.openssl}" rand -base64 32 | tr "\n:@/+=" "012345" > "${oauth-client-secret-fp}"
   '';
   dovecot-oauth2-conf-fp = "/run/${runtime-directory}/dovecot-oauth2.conf.ext";
   write-dovecot-oauth2-conf = appendSetting {
