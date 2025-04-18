@@ -1,4 +1,4 @@
-nixos-unstable: { config, lib, pkgs, ... }:
+{ config, lib, pkgs, ... }:
 let
   domain = config.selfprivacy.domain;
   subdomain = "auth";
@@ -82,17 +82,6 @@ let
   lua_path = "${lua_core_path};${lua_lrucache_path};";
 in
 lib.mkIf config.selfprivacy.sso.enable {
-  nixpkgs.overlays = [
-    (
-      _final: prev: {
-        inherit (nixos-unstable.legacyPackages.${prev.system})
-          kanidm
-          kanidm-provision
-          ;
-      }
-    )
-  ];
-
   networking.hosts = {
     # Allow the services to communicate with kanidm even if
     # there is no DNS record yet

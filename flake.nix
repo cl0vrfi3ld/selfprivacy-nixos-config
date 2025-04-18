@@ -3,6 +3,7 @@
 
   inputs = {
     nixpkgs.url = github:nixos/nixpkgs;
+    nixpkgs-2411.url = github:nixos/nixpkgs/f6687779bf4c396250831aa5a32cbfeb85bb07a3;
     nixos-unstable.url = github:nixos/nixpkgs/nixos-unstable;
 
     selfprivacy-api.url =
@@ -11,7 +12,7 @@
     selfprivacy-api.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, nixos-unstable, selfprivacy-api }: {
+  outputs = { self, nixpkgs, nixpkgs-2411, nixos-unstable, selfprivacy-api }: {
     nixosConfigurations-fun =
       { hardware-configuration
       , deployment
@@ -25,11 +26,34 @@
             hardware-configuration
             deployment
             ./configuration.nix
-            (import ./auth/auth.nix nixos-unstable)
-            {
+            ./auth/auth.nix
+            ({ config, ... }: {
+              nixpkgs.overlays = [
+                (
+                  _final: prev:
+                    let
+                      pkgs2411 =
+                        nixpkgs-2411.legacyPackages.${prev.system};
+                      pkgs-unstable =
+                        nixos-unstable.legacyPackages.${prev.system};
+                    in
+                    if config.selfprivacy.sso.useKanidm_1_4 or false
+                    then
+                      {
+                        inherit (pkgs2411) kanidm;
+                        kanidm-provision =
+                          pkgs2411.callPackage ./auth/kanidm-provision.nix { };
+                      }
+                    else
+                      {
+                        inherit (pkgs-unstable) kanidm kanidm-provision;
+                      }
+                )
+              ];
+
               disabledModules = [ "services/security/kanidm.nix" ];
               imports = [ ./auth/kanidm.nix ];
-            }
+            })
             selfprivacy-api.nixosModules.default
             ({ pkgs, lib, ... }: {
               environment.etc = (lib.attrsets.mapAttrs'
