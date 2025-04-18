@@ -3,7 +3,7 @@
 
   inputs = {
     nixpkgs.url = github:nixos/nixpkgs;
-    nixpkgs-2411.url = github:nixos/nixpkgs/nixos-24.11;
+    nixos-unstable.url = github:nixos/nixpkgs/nixos-unstable;
 
     selfprivacy-api.url =
       git+https://git.selfprivacy.org/SelfPrivacy/selfprivacy-rest-api.git;
@@ -11,7 +11,7 @@
     selfprivacy-api.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, nixpkgs-2411, selfprivacy-api }: {
+  outputs = { self, nixpkgs, nixos-unstable, selfprivacy-api }: {
     nixosConfigurations-fun =
       { hardware-configuration
       , deployment
@@ -25,7 +25,7 @@
             hardware-configuration
             deployment
             ./configuration.nix
-            (import ./auth/auth.nix nixpkgs-2411)
+            (import ./auth/auth.nix nixos-unstable)
             {
               disabledModules = [ "services/security/kanidm.nix" ];
               imports = [ ./auth/kanidm.nix ];

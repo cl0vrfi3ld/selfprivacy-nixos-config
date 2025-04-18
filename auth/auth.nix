@@ -1,4 +1,4 @@
-nixpkgs-2411: { config, lib, pkgs, ... }:
+nixos-unstable: { config, lib, pkgs, ... }:
 let
   domain = config.selfprivacy.domain;
   subdomain = "auth";
@@ -85,11 +85,10 @@ lib.mkIf config.selfprivacy.sso.enable {
   nixpkgs.overlays = [
     (
       _final: prev: {
-        inherit (nixpkgs-2411.legacyPackages.${prev.system}) kanidm;
-        kanidm-provision =
-          (nixpkgs-2411.legacyPackages.${prev.system}).callPackage
-            ./kanidm-provision.nix
-            { };
+        inherit (nixos-unstable.legacyPackages.${prev.system})
+          kanidm
+          kanidm-provision
+          ;
       }
     )
   ];
