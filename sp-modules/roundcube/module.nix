@@ -91,7 +91,7 @@ in
 
       systemd.slices.roundcube.description = "Roundcube service slice";
       # Roundcube depends on Dovecot and its OAuth2 client secret.
-      systemd.services.roundcube.after = [ "dovecot2.service" ];
+      systemd.services.phpfpm-roundcube.after = [ "dovecot2.service" ];
     }
     # the following part is active only when "auth" module is enabled
     (lib.mkIf is-auth-enabled {
@@ -127,7 +127,7 @@ in
         originUrl = "https://${cfg.subdomain}.${domain}/index.php/login/oauth";
         originLanding = "https://${cfg.subdomain}.${domain}/";
         useShortPreferredUsername = false;
-        clientSystemdUnits = [ "phpfpm-roundcube.service" ];
+        clientSystemdUnits = [ "dovecot2.service" "phpfpm-roundcube.service" ];
         enablePkce = false;
         linuxUserOfClient = linuxUserOfService;
         linuxGroupOfClient = linuxGroupOfService;
