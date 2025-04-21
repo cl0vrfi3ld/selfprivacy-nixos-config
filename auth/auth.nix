@@ -16,13 +16,6 @@ let
 
   selfprivacy-group = config.users.users."selfprivacy-api".group;
 
-  selfprivacy-service-account-name = "sp.selfprivacy-api.service-account";
-
-  kanidm-service-account-token-name =
-    "${selfprivacy-group}-service-account-token";
-  kanidm-service-account-token-fp =
-    "${keys-path}/${selfprivacy-group}/kanidm-service-account-token";
-
   kanidmMigrateDbScript = pkgs.writeShellScript "kanidm-db-migration-script" ''
     # handle a case when kanidm database is not yet created (the first startup)
     if [ -f ${config.services.kanidm.serverSettings.db_path} ]
@@ -32,52 +25,6 @@ let
         ${lib.getExe pkgs.sqlite} ${config.services.kanidm.serverSettings.db_path} < ${./kanidm-db-migration.sql}
     fi
   '';
-
-  spApiUserExecStartPostScript =
-    pkgs.writeShellScript "spApiUserExecStartPostScript" ''
-      export HOME=$RUNTIME_DIRECTORY/client_home
-      readonly KANIDM="${pkgs.kanidm}/bin/kanidm"
-
-      # get Kanidm service account for SelfPrivacyAPI
-      KANIDM_SERVICE_ACCOUNT="$($KANIDM service-account list --name idm_admin | grep -E "^name: ${selfprivacy-service-account-name}$")"
-      echo KANIDM_SERVICE_ACCOUNT: "$KANIDM_SERVICE_ACCOUNT"
-      if [ -n "$KANIDM_SERVICE_ACCOUNT" ]
-      then
-          echo "kanidm service account \"${selfprivacy-service-account-name}\" is found"
-      else
-          echo "kanidm service account \"${selfprivacy-service-account-name}\" is not found"
-          echo "creating new kanidm service account \"${selfprivacy-service-account-name}\""
-          if $KANIDM service-account create --name idm_admin "${selfprivacy-service-account-name}" "SelfPrivacy API service account" idm_admin
-          then
-              echo "kanidm service account \"${selfprivacy-service-account-name}\" created"
-          else
-              echo "error: cannot create kanidm service account \"${selfprivacy-service-account-name}\""
-              exit 1
-          fi
-      fi
-
-      $KANIDM group add-members idm_admins "${selfprivacy-service-account-name}"
-
-      # create a new read-write token for kanidm
-      if ! KANIDM_SERVICE_ACCOUNT_TOKEN_JSON="$($KANIDM service-account api-token generate --name idm_admin "${selfprivacy-service-account-name}" "${kanidm-service-account-token-name}" --output json)"
-      then
-          echo "error: kanidm CLI returns an error when trying to generate service-account api-token"
-          exit 1
-      fi
-      if ! KANIDM_SERVICE_ACCOUNT_TOKEN="$(echo "$KANIDM_SERVICE_ACCOUNT_TOKEN_JSON" | ${lib.getExe pkgs.jq} -r .result)"
-      then
-          echo "error: cannot get service-account API token from JSON"
-          exit 1
-      fi
-
-      if ! install --mode=640 \
-      <(printf "%s" "$KANIDM_SERVICE_ACCOUNT_TOKEN") \
-      ${kanidm-service-account-token-fp}
-      then
-          echo "error: cannot write token to \"${kanidm-service-account-token-fp}\""
-          exit 1
-      fi
-    '';
 
   # lua stuff for nginx for debugging only
   lua_core_path = "${pkgs.luajitPackages.lua-resty-core}/lib/lua/5.1/?.lua";
@@ -213,9 +160,6 @@ lib.mkIf config.selfprivacy.sso.enable {
     # idempotent script to run on each startup only for kanidm v1.5.0
     lib.mkIf (pkgs.kanidm.version == "1.5.0")
       (lib.mkBefore [ kanidmMigrateDbScript ]);
-
-  systemd.services.kanidm.serviceConfig.ExecStartPost = lib.mkAfter
-    [ spApiUserExecStartPostScript ];
 
   selfprivacy.passthru.auth = {
     inherit

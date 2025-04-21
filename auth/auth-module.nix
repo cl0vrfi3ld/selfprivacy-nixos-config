@@ -28,6 +28,7 @@ let
       kanidmServiceAccountTokenName = "${oauthClientID}-service-account-token";
       kanidmServiceAccountTokenFP =
         auth-passthru.mkServiceAccountTokenFP linuxGroup;
+      isRW = oauthClientID == "selfprivacy-api";
     in
     pkgs.writeShellScript
       "${oauthClientID}-kanidm-ExecStartPost-script.sh"
@@ -53,8 +54,8 @@ let
             fi
         fi
 
-        # create a new read-only token for kanidm
-        if ! KANIDM_SERVICE_ACCOUNT_TOKEN_JSON="$($KANIDM service-account api-token generate --name idm_admin "${kanidmServiceAccountName}" "${kanidmServiceAccountTokenName}" --output json)"
+        # create a new token for kanidm
+        if ! KANIDM_SERVICE_ACCOUNT_TOKEN_JSON="$($KANIDM service-account api-token generate --name idm_admin "${kanidmServiceAccountName}" "${kanidmServiceAccountTokenName}" ${lib.strings.optionalString isRW "--rw"} --output json)"
         then
             echo "error: kanidm CLI returns an error when trying to generate service-account api-token"
             exit 1
@@ -77,7 +78,11 @@ let
       + lib.strings.optionalString isMailserver ''
         # add Kanidm service account to `idm_mail_servers` group
         $KANIDM group add-members idm_mail_servers "${kanidmServiceAccountName}"
-      '');
+      ''
+      + lib.strings.optionalString isRW ''
+        $KANIDM group add-members idm_admins "${kanidmServiceAccountName}"
+      ''
+      );
 in
 {
   options.selfprivacy.auth = {
