@@ -123,6 +123,7 @@ in
         displayName = "Roundcube";
         subdomain = cfg.subdomain;
         isTokenNeeded = false;
+        isMailserver = true;
         originUrl = "https://${cfg.subdomain}.${domain}/index.php/login/oauth";
         originLanding = "https://${cfg.subdomain}.${domain}/";
         useShortPreferredUsername = false;

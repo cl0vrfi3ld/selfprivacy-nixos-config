@@ -23,7 +23,7 @@ let
         chmod 640 "${secretFP}"
       fi
     '';
-  mkKanidmExecStartPostScript = oauthClientID: linuxGroup:
+  mkKanidmExecStartPostScript = oauthClientID: linuxGroup: isMailserver:
     let
       kanidmServiceAccountName = "sp.${oauthClientID}.service-account";
       kanidmServiceAccountTokenName = "${oauthClientID}-service-account-token";
@@ -32,7 +32,7 @@ let
     in
     pkgs.writeShellScript
       "${oauthClientID}-kanidm-ExecStartPost-script.sh"
-      ''
+      (''
         export HOME=$RUNTIME_DIRECTORY/client_home
         readonly KANIDM="${pkgs.kanidm}/bin/kanidm"
 
@@ -54,9 +54,6 @@ let
             fi
         fi
 
-        # add Kanidm service account to `idm_mail_servers` group
-        $KANIDM group add-members idm_mail_servers "${kanidmServiceAccountName}"
-
         # create a new read-only token for kanidm
         if ! KANIDM_SERVICE_ACCOUNT_TOKEN_JSON="$($KANIDM service-account api-token generate --name idm_admin "${kanidmServiceAccountName}" "${kanidmServiceAccountTokenName}" --output json)"
         then
@@ -76,7 +73,12 @@ let
             echo "error: cannot write token to \"${kanidmServiceAccountTokenFP}\""
             exit 1
         fi
-      '';
+
+      ''
+      + lib.strings.optionalString isMailserver ''
+        # add Kanidm service account to `idm_mail_servers` group
+        $KANIDM group add-members idm_mail_servers "${kanidmServiceAccountName}"
+      '');
 in
 {
   options.selfprivacy.auth = {
@@ -211,6 +213,13 @@ in
               '';
               default = null;
             };
+            isMailserver = mkOption {
+              type = types.bool;
+              description = ''
+                Whether client is a mailserver.
+              '';
+              default = false;
+            };
           };
         }
       );
@@ -284,17 +293,21 @@ in
         serviceConfig =
           lib.mkMerge (lib.forEach
             clientsAttrsList
-            ({ clientID, isTokenNeeded, linuxGroupOfClient, ... }: {
-              ExecStartPre = [
-                # "-" prefix means to ignore exit code of prefixed script
-                ("-" + mkKanidmExecStartPreScript clientID linuxGroupOfClient)
-              ];
-              ExecStartPost = lib.mkIf isTokenNeeded
-                (lib.mkAfter [
-                  ("-" +
-                    mkKanidmExecStartPostScript clientID linuxGroupOfClient)
-                ]);
-            }));
+            ({ clientID, isTokenNeeded, linuxGroupOfClient, isMailserver, ... }:
+              {
+                ExecStartPre = [
+                  # "-" prefix means to ignore exit code of prefixed script
+                  ("-" + mkKanidmExecStartPreScript clientID linuxGroupOfClient)
+                ];
+                ExecStartPost = lib.mkIf isTokenNeeded
+                  (lib.mkAfter [
+                    ("-" +
+                      mkKanidmExecStartPostScript
+                        clientID
+                        linuxGroupOfClient
+                        isMailserver)
+                  ]);
+              }));
       };
 
       # for each OAuth2 client: Kanidm provisioning options
