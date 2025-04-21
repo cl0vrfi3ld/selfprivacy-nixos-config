@@ -23,6 +23,16 @@ let
   kanidm-service-account-token-fp =
     "${keys-path}/${selfprivacy-group}/kanidm-service-account-token";
 
+  kanidmMigrateDbScript = pkgs.writeShellScript "kanidm-db-migration-script" ''
+    # handle a case when kanidm database is not yet created (the first startup)
+    if [ -f ${config.services.kanidm.serverSettings.db_path} ]
+    then
+        set -o xtrace
+        # since it's the last command, it produces an exit code for systemd as well
+        ${lib.getExe pkgs.sqlite} ${config.services.kanidm.serverSettings.db_path} < ${./kanidm-db-migration.sql}
+    fi
+  '';
+
   spApiUserExecStartPostScript =
     pkgs.writeShellScript "spApiUserExecStartPostScript" ''
       export HOME=$RUNTIME_DIRECTORY/client_home
@@ -198,6 +208,11 @@ lib.mkIf config.selfprivacy.sso.enable {
       };
     };
   };
+
+  systemd.services.kanidm.serviceConfig.ExecStartPre =
+    # idempotent script to run on each startup only for kanidm v1.5.0
+    lib.mkIf (pkgs.kanidm.version == "1.5.0")
+      (lib.mkBefore [ kanidmMigrateDbScript ]);
 
   systemd.services.kanidm.serviceConfig.ExecStartPost = lib.mkAfter
     [ spApiUserExecStartPostScript ];
