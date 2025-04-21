@@ -6,7 +6,6 @@ let
     ;
   auth-passthru = config.selfprivacy.passthru.auth;
   keys-path = auth-passthru.keys-path;
-  # TODO consider tmpfiles.d for creating a directory in ${keys-path}
   # generate OAuth2 client secret
   mkKanidmExecStartPreScript = oauthClientID: linuxGroup:
     let

@@ -22,13 +22,6 @@ let
     "${selfprivacy-group}-service-account-token";
   kanidm-service-account-token-fp =
     "${keys-path}/${selfprivacy-group}/kanidm-service-account-token";
-  kanidmExecStartPreScriptRoot = pkgs.writeShellScript
-    "${selfprivacy-group}-kanidm-ExecStartPre-root-script.sh"
-    ''
-      # set-group-ID bit allows for kanidm user to create files,
-      mkdir -p -v --mode=u+rwx,g+rs,g-w,o-rwx /run/keys/${selfprivacy-group}
-      chown kanidm:${selfprivacy-group} /run/keys/${selfprivacy-group}
-    '';
 
   spApiUserExecStartPostScript =
     pkgs.writeShellScript "spApiUserExecStartPostScript" ''
@@ -95,6 +88,14 @@ lib.mkIf config.selfprivacy.sso.enable {
 
   # for ExecStartPost scripts to have access to /run/keys/*
   users.groups.keys.members = [ "kanidm" ];
+
+  systemd.tmpfiles.settings."kanidm-secrets" = {
+    "${keys-path}/${selfprivacy-group}".d = {
+      user = "kanidm";
+      group = selfprivacy-group;
+      mode = "2750";
+    };
+  };
 
   services.kanidm = {
     enableServer = true;
@@ -198,8 +199,6 @@ lib.mkIf config.selfprivacy.sso.enable {
     };
   };
 
-  systemd.services.kanidm.serviceConfig.ExecStartPre =
-    [ ("+" + kanidmExecStartPreScriptRoot) ];
   systemd.services.kanidm.serviceConfig.ExecStartPost = lib.mkAfter
     [ spApiUserExecStartPostScript ];
 
