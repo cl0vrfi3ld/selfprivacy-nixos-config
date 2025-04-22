@@ -45,11 +45,6 @@ with lib;
         default = false;
         type = types.nullOr types.bool;
       };
-      useKanidm_1_4 = mkOption {
-        description = "Whether to use Kanidm v1.4 (instead of upstream).";
-        default = false;
-        type = types.bool;
-      };
     };
     stateVersion = mkOption {
       description = "State version of the server";
