@@ -331,7 +331,7 @@ in
          , usersGroup
          , ...
          }: {
-          groups = {
+          groups = lib.mkIf (clientID != "selfprivacy-api") {
             "${adminsGroup}".members =
               [ auth-passthru.admins-group ];
             "${usersGroup}".members =
