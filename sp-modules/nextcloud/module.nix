@@ -11,6 +11,7 @@ let
 
   hostName = "${cfg.subdomain}.${sp.domain}";
   auth-passthru = config.selfprivacy.passthru.auth;
+  deleteNextcloudAdmin = config.selfprivacy.workarounds.deleteNextcloudAdmin;
   cfg = sp.modules.nextcloud;
   is-auth-enabled = cfg.enableSso && config.selfprivacy.sso.enable;
   ldap_scheme_and_host = "ldaps://${auth-passthru.ldap-host}";
@@ -89,7 +90,7 @@ in
     }) // {
       meta = {
         type = "bool";
-        weight = 3;
+        weight = 4;
       };
     };
   };
@@ -317,6 +318,12 @@ in
           --mapping-groups=groups \
           --group-provisioning=1 \
           -vvv
+
+        '' + lib.optionalString deleteNextcloudAdmin ''
+          if [[ ! -f /var/lib/nextcloud/.admin-user-deleted ]]; then
+            ${occ} user:delete admin
+            touch /var/lib/nextcloud/.admin-user-deleted
+          fi
         '';
       };
       selfprivacy.auth.clients."${oauthClientID}" = {

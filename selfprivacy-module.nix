@@ -159,5 +159,17 @@ with lib;
         You can put whatever you want here.
       '';
     };
+    #################
+    #  Workarounds  #
+    #################
+    workarounds = {
+      deleteNextcloudAdmin = mkOption {
+        description = ''
+          Whether to delete an admin user, which is initially created
+        '';
+        type = types.bool;
+        default = false;
+      };
+    };
   };
 }

@@ -13,6 +13,7 @@
   [ "selfprivacy", "passthru", "auth", "oauth2-discovery-url" ],
   [ "selfprivacy", "passthru", "auth", "oauth2-provider-name" ],
   [ "selfprivacy", "passthru", "auth", "oauth2-systemd-service" ],
+  [ "selfprivacy", "workarounds", "deleteNextcloudAdmin" ],
   [ "selfprivacy", "sso", "enable" ],
   [ "selfprivacy", "useBinds" ],
   [ "services", "nextcloud" ],
