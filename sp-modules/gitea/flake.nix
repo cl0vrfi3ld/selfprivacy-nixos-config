@@ -26,6 +26,10 @@
       homepage = "https://forgejo.org";
       sourcePage = "https://codeberg.org/forgejo/forgejo";
       supportLevel = "normal";
+      sso = {
+        userGroup = "sp.gitea.users";
+        adminGroup = "sp.gitea.admins";
+      };
     };
   };
 }

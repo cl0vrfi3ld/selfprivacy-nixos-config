@@ -32,6 +32,7 @@ in
 {
   imports = [
     ./selfprivacy-module.nix
+    ./auth/auth-module.nix
     ./volumes.nix
     ./users.nix
     ./letsencrypt/acme.nix
@@ -98,9 +99,8 @@ in
   services.openssh = {
     enable = config.selfprivacy.ssh.enable;
     settings = {
-      PasswordAuthentication = config.selfprivacy.ssh.passwordAuthentication;
+      PasswordAuthentication = false;
       PermitRootLogin = "prohibit-password";
-      LoginGraceTime = 0;
     };
     openFirewall = false;
 

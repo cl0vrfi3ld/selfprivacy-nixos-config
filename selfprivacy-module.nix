@@ -34,6 +34,18 @@ with lib;
         type = types.nullOr types.bool;
       };
     };
+    sso = {
+      enable = mkOption {
+        description = "Enable SSO.";
+        default = true;
+        type = types.nullOr types.bool;
+      };
+      debug = mkOption {
+        description = "Enable debug for SSO.";
+        default = false;
+        type = types.nullOr types.bool;
+      };
+    };
     stateVersion = mkOption {
       description = "State version of the server";
       type = types.nullOr types.str;
@@ -96,13 +108,6 @@ with lib;
         type = types.nullOr (types.listOf types.str);
         default = [ "" ];
       };
-      passwordAuthentication = mkOption {
-        description = ''
-          Password authentication for SSH
-        '';
-        default = false;
-        type = types.nullOr types.bool;
-      };
     };
     ###########
     #  Users  #
@@ -137,6 +142,33 @@ with lib;
         description = "Volume name where to store Postgres data.";
         type = types.nullOr types.str;
         default = null;
+      };
+    };
+    ################
+    # passthrough  #
+    ################
+    passthru = mkOption {
+      type = types.submodule {
+        freeformType = with types; lazyAttrsOf (uniq unspecified);
+        options = { };
+      };
+      default = { };
+      visible = false;
+      description = ''
+        This attribute allows to share data between modules.
+        You can put whatever you want here.
+      '';
+    };
+    #################
+    #  Workarounds  #
+    #################
+    workarounds = {
+      deleteNextcloudAdmin = mkOption {
+        description = ''
+          Whether to delete an admin user, which is initially created
+        '';
+        type = types.bool;
+        default = false;
       };
     };
   };
