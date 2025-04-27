@@ -86,6 +86,11 @@ with lib;
         type = types.nullOr types.bool;
         default = false;
       };
+      forceDisableDnsPropagationCheck = mkOption {
+        description = "Force disable DNS propagation check.";
+        type = types.nullOr types.bool;
+        default = false;
+      };
     };
     server = {
       provider = mkOption {

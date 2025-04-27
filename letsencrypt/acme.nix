@@ -38,7 +38,7 @@ in
         dnsProvider = lib.strings.toLower cfg.dns.provider;
         credentialsFile = acme-env-filepath;
         dnsPropagationCheck =
-          ! (lib.elem cfg.dns.provider dnsPropagationCheckExceptions);
+          ! ((lib.elem cfg.dns.provider dnsPropagationCheckExceptions) || cfg.dns.forceDisableDnsPropagationCheck);
       };
       "root-${cfg.domain}" = {
         domain = cfg.domain;
