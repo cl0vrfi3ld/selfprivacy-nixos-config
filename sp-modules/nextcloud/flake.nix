@@ -18,6 +18,7 @@
       backupDescription = "All the files and other data stored in Nextcloud.";
       systemdServices = [
         "phpfpm-nextcloud.service"
+        "redis-nextcloud.service"
       ];
       folders = [
         "/var/lib/nextcloud"

@@ -184,6 +184,8 @@ in
 
         phpOptions.display_errors = "Off";
 
+        configureRedis = true;
+
         settings = {
           # further forces Nextcloud to use HTTPS
           overwriteprotocol = "https";
