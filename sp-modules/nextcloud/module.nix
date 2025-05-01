@@ -183,6 +183,7 @@ in
         autoUpdateApps.startAt = "05:00:00";
 
         phpOptions.display_errors = "Off";
+        phpOptions."opcache.interned_strings_buffer" = 20;
 
         configureRedis = true;
 
