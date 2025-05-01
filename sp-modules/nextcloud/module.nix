@@ -183,7 +183,7 @@ in
         autoUpdateApps.startAt = "05:00:00";
 
         phpOptions.display_errors = "Off";
-        phpOptions."opcache.interned_strings_buffer" = 20;
+        phpOptions."opcache.interned_strings_buffer" = "32";
 
         configureRedis = true;
 
@@ -248,6 +248,8 @@ in
             set -o errexit
             set -o nounset
             ${lib.strings.optionalString cfg.debug "set -o xtrace"}
+
+            ${occ} app:disable logreader
 
             ${occ} app:install user_ldap || :
             ${occ} app:enable  user_ldap
@@ -374,6 +376,7 @@ in
     (lib.mkIf (! is-auth-enabled) {
       systemd.services.nextcloud-setup = {
         script = ''
+          ${occ} app:disable logreader
           ${occ} app:disable user_oidc
         '';
       };
