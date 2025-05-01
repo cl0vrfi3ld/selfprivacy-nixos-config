@@ -200,6 +200,8 @@ in
           lost_password_link = "disabled";
           allow_multiple_user_backends = false;
 
+          updatechecker = false; # nixpkgs handles updates for us, update via web ui will fail on nixos.
+
           user_oidc = {
             single_logout = true;
             use_pkce = true;
