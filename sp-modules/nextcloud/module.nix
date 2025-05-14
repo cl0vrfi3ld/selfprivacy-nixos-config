@@ -31,6 +31,11 @@ let
     auth-passthru.mkServiceAccountTokenFP linuxUserOfService;
   oauthClientSecretFP =
     auth-passthru.mkOAuth2ClientSecretFP linuxUserOfService;
+
+  updater-page-substitute =
+    pkgs.runCommandNoCC "nextcloud-updater-page-substitute" { } ''
+      install -m644 ${./updater.html} -DT $out/index.html
+    '';
 in
 {
   options.selfprivacy.modules.nextcloud = with lib; {
@@ -232,6 +237,14 @@ in
         locations."~ \\.php(?:$|/)".extraConfig = ''
           error_page 500 502 503 504 ${pkgs.nginx}/html/50x.html;
         '';
+        locations."^~ /updater/" = {
+          alias = updater-page-substitute + "/";
+          extraConfig = ''
+            error_page 410 /index.html;
+            # otherwise, nginx returns 405 for POST requests to static content
+            error_page 405 =200 $uri;
+          '';
+        };
       };
     }
     # the following part is active only when "auth" module is enabled
