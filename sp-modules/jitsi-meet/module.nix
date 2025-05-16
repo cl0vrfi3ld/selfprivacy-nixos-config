@@ -39,9 +39,15 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    nixpkgs.config.permittedInsecurePackages = [
-      "jitsi-meet-1.0.7952"
+    nixpkgs.overlays = [
+      (_: prev: {
+        # We disable E2E for clients below
+        jitsi-meet = prev.jitsi-meet.overrideAttrs (old: {
+          meta = old.meta // { knownVulnerabilities = [ ]; };
+        });
+      })
     ];
+
     services.jitsi-meet = {
       enable = true;
       hostName = "${cfg.subdomain}.${domain}";
@@ -55,6 +61,7 @@ in
         prejoinConfig = {
           enabled = true;
         };
+        e2ee.disabled = true; # libolm is vulnerable and E2E is generally broken.
       };
     };
     services.prosody.extraConfig = ''
