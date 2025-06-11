@@ -78,6 +78,16 @@ in
         weight = 1;
       };
     };
+    enableSambaFeatures = (lib.mkOption {
+      type = types.bool;
+      default = false;
+      description = "Enable support for Samba/CIFS features";
+    }) // {
+      meta = {
+        type = "bool";
+        weight = 3;
+      };
+    };
     enableSso = (lib.mkOption {
       default = false;
       type = lib.types.bool;
@@ -247,6 +257,10 @@ in
         };
       };
     }
+    # enables samba features when requested
+    (lib.mkIf cfg.enableSambaFeatures {
+      environment.systemPackages = [ pkgs.cifs-utils ];
+    })
     # the following part is active only when "auth" module is enabled
     (lib.mkIf is-auth-enabled {
       systemd.services.nextcloud-setup = {
