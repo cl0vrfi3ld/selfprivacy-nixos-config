@@ -154,7 +154,7 @@ in
         # You can use defined options here.
         services.actual = {
           enable = true;
-          openFirewall = true;
+          # openFirewall = true; # unneeded as we are using the built-in proxy server
           settings = {
             # ACTUAL_DATA_DIR = "/var/lib/actual";
             port = 5006;
