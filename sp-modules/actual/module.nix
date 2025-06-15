@@ -10,7 +10,7 @@ let
   cfg = sp.modules.actual;
 
   is-auth-enabled = cfg.enableSso && config.selfprivacy.sso.enable;
-  oauthClientID = "actualbudget";
+  oauthClientID = "actual";
   auth-passthru = config.selfprivacy.passthru.auth;
   oauth2-provider-name = auth-passthru.oauth2-provider-name;
   full-domain = "https://${cfg.subdomain}.${sp.domain}";
